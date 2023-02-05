@@ -1,0 +1,40 @@
+{
+  "name": "my-programming-journey-backend",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src/index.ts",
+  "scripts": {
+    "build": "webpack",
+    "start:dev": "cross-env NODE_ENV=development webpack",
+    "run:dev": "cross-env NODE_ENV=development nodemon dist/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CarmenChanCKY/MyProgrammingJourney-backend.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/CarmenChanCKY/MyProgrammingJourney-backend/issues"
+  },
+  "homepage": "https://github.com/CarmenChanCKY/MyProgrammingJourney-backend#readme",
+  "dependencies": {
+    "mysql2": "^3.0.1"
+  },
+  "devDependencies": {
+    "dotenv": "^16.0.3",
+    "@types/express": "^4.17.17",
+    "express": "^4.18.2",
+    "@types/node": "^18.11.18",
+    "cross-env": "^7.0.3",
+    "nodemon": "^2.0.20",
+    "ts-loader": "^8.2.0",
+    "tsconfig-paths-webpack-plugin": "^4.0.0",
+    "typescript": "~4.6.4",
+    "webpack": "^4.35.0",
+    "webpack-cli": "^3.3.5",
+    "webpack-node-externals": "^3.0.0",
+    "webpack-shell-plugin": "^0.5.0"
+  }
+}
