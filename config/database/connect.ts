@@ -1,5 +1,6 @@
-import mysql2 from "mysql2";
+import mysql2 from "mysql2/promise";
 import { getEnvironmentVar } from "config/env/env";
+import { getErrorMsg } from "@/middleware/error-handler/error_handler";
 
 let dbPool: mysql2.Pool = mysql2.createPool({
   host: getEnvironmentVar("DB_HOST", "localhost"),
@@ -10,13 +11,17 @@ let dbPool: mysql2.Pool = mysql2.createPool({
   dateStrings: true,
 });
 
-dbPool.getConnection((err, connection) => {
-  if (err) {
-    console.error("DB CONNECT FAIL");
-    throw err;
-  }
+dbPool
+  .getConnection()
+  .then((connection) => {
+    connection.release();
+  })
+  .catch((error) => {
+    throw getErrorMsg("502", error);
+  });
 
-  connection.release();
-});
+const getDBName = (): string => {
+  return getEnvironmentVar("DB_DATABASE");
+};
 
-export { dbPool };
+export { dbPool, getDBName };

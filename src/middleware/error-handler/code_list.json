@@ -1,0 +1,14 @@
+{
+  "422": {
+    "name": "Unprocessable Entity - Invalid Input",
+    "description": "The request was well-formed but was unable to be followed due to semantic errors"
+  },
+  "500": {
+    "name": "Internal Server Error",
+    "description": "The server encountered an unexpected condition that prevented it from fulfilling the request"
+  },
+  "502": {
+    "name": "Bad Gateway",
+    "description": "The server, while working as a gateway to get a response needed to handle the request, got an invalid response"
+  }
+}
