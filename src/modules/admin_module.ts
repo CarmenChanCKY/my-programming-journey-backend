@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import { getEnvironmentVar } from "config/env/env";
+import jwt from "jsonwebtoken";
 
 const generateSalt = (): string => {
   return crypto.randomBytes(16).toString("hex");
@@ -15,4 +16,10 @@ const hashPassword = (plainPW: string, salt: string): string => {
     .toString(`hex`);
 };
 
-export { generateSalt, hashPassword };
+const generateJWTToken = (data: Object): string => {
+  return jwt.sign(data, getEnvironmentVar("JWT_SECRET"), {
+    expiresIn: "2hours",
+  });
+};
+
+export { generateSalt, hashPassword, generateJWTToken };

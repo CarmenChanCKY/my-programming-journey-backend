@@ -20,8 +20,4 @@ export default class AdminData {
   @MinLength(16)
   @IsOptional()
   salt!: string;
-
-  @IsString()
-  @IsOptional()
-  token!: string;
 }

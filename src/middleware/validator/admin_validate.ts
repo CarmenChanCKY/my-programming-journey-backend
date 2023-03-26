@@ -3,7 +3,7 @@ import { validateOrReject } from "class-validator";
 import { getErrorMsg } from "@/middleware/error-handler/error_handler";
 import AdminData from "@/interface/admin_data";
 
-const validateRegisterRegex = async (
+const validateAdminRegex = async (
   req: Request,
   res: Response,
   next: NextFunction
@@ -11,8 +11,8 @@ const validateRegisterRegex = async (
   const content = req.body;
 
   const validateData = new AdminData();
-  validateData.email = content.email.trim();
-  validateData.password = content.password.trim();
+  validateData.email = content.email;
+  validateData.password = content.password;
 
   try {
     await validateOrReject(validateData, {
@@ -25,4 +25,4 @@ const validateRegisterRegex = async (
   }
 };
 
-export { validateRegisterRegex };
+export { validateAdminRegex };

@@ -1,4 +1,8 @@
 {
+  "401": {
+    "name": "Unauthorized",
+    "description": "The client must authenticate itself to get the requested response"
+  },
   "422": {
     "name": "Unprocessable Entity - Invalid Input",
     "description": "The request was well-formed but was unable to be followed due to semantic errors"
