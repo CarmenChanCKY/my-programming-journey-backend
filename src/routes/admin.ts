@@ -7,7 +7,7 @@ import {
   generateJWTToken,
 } from "@/modules/admin_module";
 import { getErrorMsg } from "@/middleware/error-handler/error_handler";
-import {authenticateJWTToken} from '@/middleware/common_middleware';
+import { authenticateJWTToken } from "@/middleware/common_middleware";
 
 const adminRouter = express.Router();
 
@@ -89,9 +89,5 @@ adminRouter.post(
     }
   }
 );
-
-adminRouter.get('/test',authenticateJWTToken,(req:Request,res:Response)=>{
-res.send(req.body)
-})
 
 export default adminRouter;
