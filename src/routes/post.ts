@@ -83,7 +83,7 @@ postRouter.get("/detail", async (req: Request, res: Response) => {
       return res.status(422).end("invalid post slug");
     }
 
-    const query = `SELECT post.title, post.date, post.content, post.slug, categories.category_id,
+    const query = `SELECT post.id, post.title, post.date, post.content, post.slug, categories.category_id,
                       categories.name AS category_name, tag.tags_data, reference.reference_array
                     FROM post
                     LEFT JOIN (SELECT post_category.post_id, post_category.category_id, category.name
@@ -112,6 +112,52 @@ postRouter.get("/detail", async (req: Request, res: Response) => {
       res.send(data[0]);
     } else {
       return res.status(404).end("record not found");
+    }
+  } catch (error) {
+    return res.status(500).end(getErrorMsg("500", error));
+  }
+});
+
+postRouter.get("/next", async (req: Request, res: Response) => {
+  try {
+    let id: any = req.query.id;
+
+    if (id === undefined || id === null || id === "" || isNaN(Number(id))) {
+      return res.status(404).end("invalid id");
+    }
+
+    const query = `SELECT title, slug FROM post WHERE id > ?`;
+
+    const [result] = await dbPool.execute(query, [id]);
+    const data = JSON.parse(JSON.stringify(result));
+
+    if (Array.isArray(data) && data.length > 0) {
+      res.send(data[0]);
+    } else {
+      res.send({});
+    }
+  } catch (error) {
+    return res.status(500).end(getErrorMsg("500", error));
+  }
+});
+
+postRouter.get("/previous", async (req: Request, res: Response) => {
+  try {
+    let id: any = req.query.id;
+
+    if (id === undefined || id === null || id === "" || isNaN(Number(id))) {
+      return res.status(404).end("invalid id");
+    }
+
+    const query = `SELECT title, slug FROM post WHERE id < ?`;
+
+    const [result] = await dbPool.execute(query, [id]);
+    const data = JSON.parse(JSON.stringify(result));
+
+    if (Array.isArray(data) && data.length > 0) {
+      res.send(data[0]);
+    } else {
+      res.send({});
     }
   } catch (error) {
     return res.status(500).end(getErrorMsg("500", error));
