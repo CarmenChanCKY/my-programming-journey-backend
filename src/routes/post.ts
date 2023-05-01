@@ -126,7 +126,7 @@ postRouter.get("/next", async (req: Request, res: Response) => {
       return res.status(404).end("invalid id");
     }
 
-    const query = `SELECT title, slug FROM post WHERE id > ?`;
+    const query = `SELECT title, slug FROM post WHERE id > ? ORDER BY date ASC, id ASC LIMIT 1 OFFSET 0`;
 
     const [result] = await dbPool.execute(query, [id]);
     const data = JSON.parse(JSON.stringify(result));
@@ -149,7 +149,7 @@ postRouter.get("/previous", async (req: Request, res: Response) => {
       return res.status(404).end("invalid id");
     }
 
-    const query = `SELECT title, slug FROM post WHERE id < ?`;
+    const query = `SELECT title, slug FROM post WHERE id < ? ORDER BY date DESC, id DESC LIMIT 1 OFFSET 0`;
 
     const [result] = await dbPool.execute(query, [id]);
     const data = JSON.parse(JSON.stringify(result));
