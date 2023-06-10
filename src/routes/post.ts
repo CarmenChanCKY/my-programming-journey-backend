@@ -26,13 +26,10 @@ postRouter.get(
         return res.status(422).end("pages cannot smaller than or equals 0");
       }
 
-      const query = `SELECT post.title, post.date, post.content, post.slug, categories.category_id,
-                    categories.name AS category_name, tag.tags_data
+      const query = `SELECT post.title, post.date, post.content, post.slug, post.category_id,
+                      category.name AS category_name, tag.tags_data
                   FROM post
-                  LEFT JOIN (SELECT post_category.post_id, post_category.category_id, category.name
-                    FROM post_category
-                    JOIN category ON category.id = post_category.category_id
-                        AND category.data_status = 'active') as categories on categories.post_id = post.id
+                  LEFT JOIN category on category.id = post.category_id AND category.data_status = 'active'
                   LEFT JOIN (SELECT post_tags.post_id, JSON_ARRAYAGG(JSON_OBJECT("id", tags.id, "name", tags.name)) AS tags_data
                       FROM post_tags
                       JOIN tags AS tags
@@ -83,14 +80,10 @@ postRouter.get("/detail", async (req: Request, res: Response) => {
       return res.status(422).end("invalid post slug");
     }
 
-    const query = `SELECT post.id, post.title, post.date, post.content, post.slug, categories.category_id,
-                      categories.name AS category_name, tag.tags_data, reference.reference_array
+    const query = `SELECT post.id, post.title, post.date, post.content, post.slug, post.category_id,
+                      category.name AS category_name, tag.tags_data, reference.reference_array
                     FROM post
-                    LEFT JOIN (SELECT post_category.post_id, post_category.category_id, category.name
-                      FROM post_category
-                      JOIN category ON category.id = post_category.category_id
-                        AND category.data_status = 'active'
-                      WHERE post_category.data_status = 'active') AS categories ON categories.post_id = post.id
+                    LEFT JOIN category ON category.id = post.category_id AND category.data_status = 'active'
                     LEFT JOIN (SELECT post_tags.post_id, JSON_ARRAYAGG(JSON_OBJECT("id", tags.id, "name", tags.name)) AS tags_data
                       FROM post_tags
                       JOIN tags ON tags.id = post_tags.tags_id

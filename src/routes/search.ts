@@ -1,0 +1,129 @@
+import express, { NextFunction, Request, Response } from "express";
+import { dbPool } from "config/database/connect";
+import { getErrorMsg } from "@/middleware/error-handler/error_handler";
+
+const searchRouter = express.Router();
+
+searchRouter.get("/post", async (req: Request, res: Response) => {
+  try {
+    let keyword = req.query.keyword;
+    let pages: any = req.query.pages;
+
+    if (keyword === undefined || keyword === null || keyword === "") {
+      return res.status(404).end("invalid pages");
+    }
+
+    if (
+      pages === undefined ||
+      pages === null ||
+      pages === "" ||
+      isNaN(Number(pages))
+    ) {
+      return res.status(404).end("invalid pages");
+    }
+
+    const limit: number = 10;
+    pages = (parseInt(pages.toString()) - 1) * limit;
+
+    if (pages < 0) {
+      return res.status(422).end("pages cannot smaller than or equals 0");
+    }
+
+    const startStr = dbPool.escape("\\b" + keyword);
+    const middleStr = dbPool.escape("\\b" + keyword + "\\b");
+    const endStr = dbPool.escape(keyword + "\\b");
+
+    // query for search title
+    const compareTitle = "LOWER(post.title)";
+    const titleQuery = `${compareTitle} REGEXP ${startStr} OR ${compareTitle} REGEXP ${endStr} OR ${compareTitle} REGEXP ${middleStr}`;
+
+    // query for search content
+    const compareContent =
+      "LOWER(REGEXP_REPLACE(post.content, '(<[^>]*>)|(&nbsp;)', ''))";
+    const contentQuery = `${compareContent} REGEXP ${startStr} OR ${compareContent} REGEXP ${endStr} OR ${compareContent} REGEXP ${middleStr}`;
+
+    const query = `SELECT post.title, post.date, post.content, post.slug, post.category_id,
+                        category.name AS category_name, tag.tags_data
+                    FROM post
+                    LEFT JOIN category ON category.id = post.category_id AND category.data_status = 'active'
+                    LEFT JOIN (SELECT post_tags.post_id, JSON_ARRAYAGG(JSON_OBJECT("id", tags.id, "name", tags.name)) AS tags_data
+                        FROM post_tags
+                        JOIN tags AS tags
+                            ON tags.id = post_tags.tags_id AND tags.data_status = 'active'
+                        WHERE post_tags.data_status = 'active'
+                        GROUP BY post_tags.post_id) AS tag ON tag.post_id = post.id
+                    WHERE post.data_status = 'active'
+                    AND (${titleQuery} OR ${contentQuery})
+                    ORDER BY post.date DESC , post.id DESC
+                    LIMIT ${limit} OFFSET ${pages}`;
+
+    const [result] = await dbPool.execute(query);
+
+    const totalQuery = `SELECT COUNT(post.id) AS post_total
+                        FROM post AS post
+                        WHERE post.data_status = 'active'
+                        AND (${titleQuery} OR ${contentQuery})`;
+
+    const [totalResult] = await dbPool.execute(totalQuery, [keyword, keyword]);
+
+    const data = JSON.parse(JSON.stringify(result));
+    const total = JSON.parse(JSON.stringify(totalResult));
+
+    if (
+      Array.isArray(data) &&
+      Array.isArray(total) &&
+      data.length > 0 &&
+      total.length > 0
+    ) {
+      const regex = new RegExp("</?[^>]+(>|$)", "gi");
+      for (let i = 0; i < data.length; i++) {
+        data[i].content = data[i].content.replaceAll(regex, "");
+      }
+
+      res.send({ data, total: total[0].post_total });
+    } else {
+      res.send([]);
+    }
+  } catch (error) {
+    console.log(error);
+    return res.status(500).end(getErrorMsg("500", error));
+  }
+});
+
+searchRouter.get("/category", async (req: Request, res: Response) => {
+  try {
+    let name = req.query.name;
+    if (name === undefined || name === null || name === "") {
+      res.send([]);
+      return;
+    }
+
+    const query = `SELECT post.title, post.date, post.content, post.slug, post.category_id,
+                          category.name AS category_name, tag.tags_data
+                      FROM post
+                        JOIN category ON category.id = post.category_id AND LOWER(category.name) = LOWER(?) AND category.data_status = 'active'
+                      LEFT JOIN (SELECT post_tags.post_id, JSON_ARRAYAGG(JSON_OBJECT("id", tags.id, "name", tags.name)) AS tags_data
+                          FROM post_tags
+                          JOIN tags AS tags
+                              ON tags.id = post_tags.tags_id AND tags.data_status = 'active'
+                          WHERE post_tags.data_status = 'active'
+                          GROUP BY post_tags.post_id) AS tag ON tag.post_id = post.id
+                      WHERE post.data_status = 'active'
+                      ORDER BY post.date DESC , post.id DESC`;
+
+    const [result] = await dbPool.execute(query, [name]);
+
+    const data = JSON.parse(JSON.stringify(result));
+
+    if (Array.isArray(data) && data.length > 0) {
+      res.send(data);
+    } else {
+      res.send([]);
+    }
+  } catch (error) {
+    console.log(error);
+    return res.status(500).end(getErrorMsg("500", error));
+  }
+});
+
+export default searchRouter;
