@@ -1,24 +1,27 @@
-import express, { NextFunction, Request, Response } from "express";
+import express, { Request, Response } from "express";
 import { dbPool } from "config/database/connect";
 import { getErrorMsg } from "@/middleware/error-handler/error_handler";
+import { removeHTMLTags } from "@/modules/common_module";
+import { validateQueryString } from "@/middleware/validator/query_validate";
 
 const searchRouter = express.Router();
 
 searchRouter.get("/post", async (req: Request, res: Response) => {
   try {
-    let keyword = req.query.keyword;
+    let keyword: any = req.query.keyword;
     let pages: any = req.query.pages;
 
-    if (keyword === undefined || keyword === null || keyword === "") {
-      return res.status(404).end("invalid pages");
+    if (!isNaN(Number(pages))) {
+      pages = parseInt(pages);
     }
 
-    if (
-      pages === undefined ||
-      pages === null ||
-      pages === "" ||
-      isNaN(Number(pages))
-    ) {
+    let validateKeyword = await validateQueryString({ slug: keyword });
+    let validateInt = await validateQueryString(
+      { pages },
+      { groups: ["normalPage"] }
+    );
+
+    if (!validateKeyword || !validateInt) {
       return res.status(404).end("invalid pages");
     }
 
@@ -28,6 +31,8 @@ searchRouter.get("/post", async (req: Request, res: Response) => {
     if (pages < 0) {
       return res.status(422).end("pages cannot smaller than or equals 0");
     }
+
+    keyword = keyword.toString().trim();
 
     const startStr = dbPool.escape("\\b" + keyword);
     const middleStr = dbPool.escape("\\b" + keyword + "\\b");
@@ -75,48 +80,11 @@ searchRouter.get("/post", async (req: Request, res: Response) => {
       data.length > 0 &&
       total.length > 0
     ) {
-      const regex = new RegExp("</?[^>]+(>|$)", "gi");
       for (let i = 0; i < data.length; i++) {
-        data[i].content = data[i].content.replaceAll(regex, "");
+        data[i].content = removeHTMLTags(data[i].content);
       }
 
       res.send({ data, total: total[0].post_total });
-    } else {
-      res.send([]);
-    }
-  } catch (error) {
-    console.log(error);
-    return res.status(500).end(getErrorMsg("500", error));
-  }
-});
-
-searchRouter.get("/category", async (req: Request, res: Response) => {
-  try {
-    let name = req.query.name;
-    if (name === undefined || name === null || name === "") {
-      res.send([]);
-      return;
-    }
-
-    const query = `SELECT post.title, post.date, post.content, post.slug, post.category_id,
-                          category.name AS category_name, tag.tags_data
-                      FROM post
-                        JOIN category ON category.id = post.category_id AND LOWER(category.name) = LOWER(?) AND category.data_status = 'active'
-                      LEFT JOIN (SELECT post_tags.post_id, JSON_ARRAYAGG(JSON_OBJECT("id", tags.id, "name", tags.name)) AS tags_data
-                          FROM post_tags
-                          JOIN tags AS tags
-                              ON tags.id = post_tags.tags_id AND tags.data_status = 'active'
-                          WHERE post_tags.data_status = 'active'
-                          GROUP BY post_tags.post_id) AS tag ON tag.post_id = post.id
-                      WHERE post.data_status = 'active'
-                      ORDER BY post.date DESC , post.id DESC`;
-
-    const [result] = await dbPool.execute(query, [name]);
-
-    const data = JSON.parse(JSON.stringify(result));
-
-    if (Array.isArray(data) && data.length > 0) {
-      res.send(data);
     } else {
       res.send([]);
     }

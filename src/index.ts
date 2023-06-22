@@ -8,6 +8,7 @@ const port = getEnvironmentVar("PORT", 3000);
 import adminRouter from "@/routes/admin";
 import postRouter from "@/routes/post";
 import searchRouter from "@/routes/search";
+import categoriesRouter from "@/routes/categories";
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -15,6 +16,7 @@ app.use(express.urlencoded({ extended: false }));
 app.use("/post", postRouter);
 app.use("/admin", adminRouter);
 app.use("/explore", searchRouter);
+app.use("/categories", categoriesRouter);
 
 // custom error handler
 app.use(errorHandler);

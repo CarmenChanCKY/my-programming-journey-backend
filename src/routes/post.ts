@@ -1,32 +1,41 @@
-import express, { NextFunction, Request, Response } from "express";
+import express, { Request, Response } from "express";
 import { dbPool } from "config/database/connect";
 import { getErrorMsg } from "@/middleware/error-handler/error_handler";
+import { validateQueryString } from "@/middleware/validator/query_validate";
+import { removeHTMLTags } from "@/modules/common_module";
 
 const postRouter = express.Router();
 
-postRouter.get(
-  "/list",
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      let pages: any = req.query.pages;
+postRouter.get("/list", async (req: Request, res: Response) => {
+  try {
+    let pages: any = req.query.pages;
 
-      if (
-        pages === undefined ||
-        pages === null ||
-        pages === "" ||
-        isNaN(Number(pages))
-      ) {
+    if (!isNaN(Number(pages))) {
+      pages = parseInt(pages);
+
+      let validateInt = await validateQueryString(
+        { pages },
+        { groups: ["normalPage"] }
+      );
+
+      if (!validateInt) {
         return res.status(404).end("invalid pages");
       }
+    } else {
+      let validateEmpty = await validateQueryString(
+        { pages },
+        { groups: ["firstPage"] }
+      );
 
-      const limit: number = 10;
-      pages = (parseInt(pages.toString()) - 1) * limit;
-
-      if (pages < 0) {
-        return res.status(422).end("pages cannot smaller than or equals 0");
+      if (validateEmpty) {
+        pages = 1;
       }
+    }
 
-      const query = `SELECT post.title, post.date, post.content, post.slug, post.category_id,
+    const limit: number = 10;
+    pages = (parseInt(pages.toString()) - 1) * limit;
+
+    const query = `SELECT post.title, post.date, post.content, post.slug, post.category_id,
                       category.name AS category_name, tag.tags_data
                   FROM post
                   LEFT JOIN category on category.id = post.category_id AND category.data_status = 'active'
@@ -40,44 +49,43 @@ postRouter.get(
                   ORDER BY post.date DESC , post.id DESC
                   LIMIT ${limit} OFFSET ${pages}`;
 
-      const [result] = await dbPool.execute(query, []);
+    const [result] = await dbPool.execute(query, []);
 
-      const totalQuery = `SELECT COUNT(post.id) AS post_total
+    const totalQuery = `SELECT COUNT(post.id) AS post_total
                         FROM post AS post
                         WHERE post.data_status = 'active'`;
 
-      const [totalResult] = await dbPool.execute(totalQuery, []);
-      const data = JSON.parse(JSON.stringify(result));
-      const total = JSON.parse(JSON.stringify(totalResult));
+    const [totalResult] = await dbPool.execute(totalQuery, []);
+    const data = JSON.parse(JSON.stringify(result));
+    const total = JSON.parse(JSON.stringify(totalResult));
 
-      if (
-        Array.isArray(data) &&
-        Array.isArray(total) &&
-        data.length > 0 &&
-        total.length > 0
-      ) {
-        const regex = new RegExp("</?[^>]+(>|$)", "gi");
-        for (let i = 0; i < data.length; i++) {
-          data[i].content = data[i].content.replaceAll(regex, "");
-        }
-
-        res.send({ data, total: total[0].post_total });
-      } else {
-        // throw new Error('BROKEN')
-        return res.status(404).end("record not found");
+    if (
+      Array.isArray(data) &&
+      Array.isArray(total) &&
+      data.length > 0 &&
+      total.length > 0
+    ) {
+      for (let i = 0; i < data.length; i++) {
+        data[i].content = removeHTMLTags(data[i].content);
       }
-    } catch (error) {
-      return res.status(500).end(getErrorMsg("500", error));
+
+      res.send({ data, total: total[0].post_total });
+    } else {
+      return res.status(404).end("record not found");
     }
+  } catch (error) {
+    console.log(error);
+    return res.status(500).end(getErrorMsg("500", error));
   }
-);
+});
 
 postRouter.get("/detail", async (req: Request, res: Response) => {
   try {
     let postSlug: any = req.query.slug;
 
-    if (postSlug === undefined || postSlug === null || postSlug === "") {
-      return res.status(422).end("invalid post slug");
+    let validateEmpty = await validateQueryString({ slug: postSlug });
+    if (!validateEmpty) {
+      return res.status(404).end("invalid post slug");
     }
 
     const query = `SELECT post.id, post.title, post.date, post.content, post.slug, post.category_id,
@@ -92,7 +100,7 @@ postRouter.get("/detail", async (req: Request, res: Response) => {
                       GROUP BY post_tags.post_id) AS tag ON tag.post_id = post.id
                     LEFT JOIN (SELECT post_reference.post_id,
                         JSON_ARRAYAGG(JSON_OBJECT('name', post_reference.name, 'hyperlink', post_reference.hyperlink)) AS reference_array
-                      FROM post_reference 
+                      FROM post_reference
                       WHERE post_reference.data_status = 'active'
                       group by post_reference.post_id) AS reference ON post.id = reference.post_id
                     WHERE post.data_status = 'active' AND post.slug = ?`;
@@ -107,6 +115,7 @@ postRouter.get("/detail", async (req: Request, res: Response) => {
       return res.status(404).end("record not found");
     }
   } catch (error) {
+    console.log(error);
     return res.status(500).end(getErrorMsg("500", error));
   }
 });
@@ -115,7 +124,13 @@ postRouter.get("/next", async (req: Request, res: Response) => {
   try {
     let id: any = req.query.id;
 
-    if (id === undefined || id === null || id === "" || isNaN(Number(id))) {
+    if (!isNaN(Number(id))) {
+      id = parseInt(id);
+    }
+
+    let validateID = await validateQueryString({ id });
+
+    if (!validateID) {
       return res.status(404).end("invalid id");
     }
 
@@ -130,6 +145,7 @@ postRouter.get("/next", async (req: Request, res: Response) => {
       res.send({});
     }
   } catch (error) {
+    console.log(error);
     return res.status(500).end(getErrorMsg("500", error));
   }
 });
@@ -138,7 +154,13 @@ postRouter.get("/previous", async (req: Request, res: Response) => {
   try {
     let id: any = req.query.id;
 
-    if (id === undefined || id === null || id === "" || isNaN(Number(id))) {
+    if (!isNaN(Number(id))) {
+      id = parseInt(id);
+    }
+
+    let validateID = await validateQueryString({ id });
+
+    if (!validateID) {
       return res.status(404).end("invalid id");
     }
 
@@ -153,6 +175,7 @@ postRouter.get("/previous", async (req: Request, res: Response) => {
       res.send({});
     }
   } catch (error) {
+    console.log(error);
     return res.status(500).end(getErrorMsg("500", error));
   }
 });
