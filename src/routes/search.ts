@@ -28,10 +28,6 @@ searchRouter.get("/post", async (req: Request, res: Response) => {
     const limit: number = 10;
     pages = (parseInt(pages.toString()) - 1) * limit;
 
-    if (pages < 0) {
-      return res.status(422).end("pages cannot smaller than or equals 0");
-    }
-
     keyword = keyword.toString().trim();
 
     const startStr = dbPool.escape("\\b" + keyword);
