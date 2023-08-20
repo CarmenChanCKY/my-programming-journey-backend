@@ -45,7 +45,7 @@ categoriesRouter.get("/all", async (req: Request, res: Response) => {
         });
 
         resultData.push({
-          name: groupData[i].category_name,
+          listTitle: groupData[i].category_name,
           list,
         });
       }
@@ -128,14 +128,6 @@ categoriesRouter.get("/list", async (req: Request, res: Response) => {
     console.log(error);
     return res.status(500).end(getErrorMsg("500", error));
   }
-});
-
-categoriesRouter.get("/previous", async (req: Request, res: Response) => {
-  // TODO:
-});
-
-categoriesRouter.get("/next", async (req: Request, res: Response) => {
-  // TODO:
 });
 
 export default categoriesRouter;
