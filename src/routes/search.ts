@@ -11,17 +11,31 @@ searchRouter.get("/post", async (req: Request, res: Response) => {
     let keyword: any = req.query.keyword;
     let pages: any = req.query.pages;
 
+    let validateKeyword = await validateQueryString({ slug: keyword });
+
+    let validatePage = false;
+
     if (!isNaN(Number(pages))) {
       pages = parseInt(pages);
+
+      validatePage = await validateQueryString(
+        { pages },
+        { groups: ["normalPage"] }
+      );
+    } else {
+      let validateEmpty = await validateQueryString(
+        { pages },
+        { groups: ["firstPage"] }
+      );
+
+      if (!validateEmpty) {
+        pages = 1;
+      }
+
+      validatePage = true;
     }
 
-    let validateKeyword = await validateQueryString({ slug: keyword });
-    let validateInt = await validateQueryString(
-      { pages },
-      { groups: ["normalPage"] }
-    );
-
-    if (!validateKeyword || !validateInt) {
+    if (!validateKeyword || !validatePage) {
       return res.status(404).end("invalid pages");
     }
 

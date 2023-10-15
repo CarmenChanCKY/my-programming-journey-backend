@@ -27,7 +27,7 @@ postRouter.get("/list", async (req: Request, res: Response) => {
         { groups: ["firstPage"] }
       );
 
-      if (validateEmpty) {
+      if (!validateEmpty) {
         pages = 1;
       }
     }

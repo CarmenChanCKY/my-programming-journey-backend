@@ -15,7 +15,6 @@ const validateQueryString = async (
 
   let options = {
     validationError: { target: false },
-    skipMissingProperties: true,
   };
 
   if (Object.keys(customOptions).length > 0) {
@@ -24,7 +23,6 @@ const validateQueryString = async (
 
   try {
     await validateOrReject(validateData, options);
-
     result = true;
   } catch (error) {
     console.log(error);

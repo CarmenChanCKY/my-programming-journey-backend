@@ -9,6 +9,7 @@ import adminRouter from "@/routes/admin";
 import postRouter from "@/routes/post";
 import searchRouter from "@/routes/search";
 import categoriesRouter from "@/routes/categories";
+import tagsRouter from "@/routes/tag";
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -17,6 +18,7 @@ app.use("/post", postRouter);
 app.use("/admin", adminRouter);
 app.use("/explore", searchRouter);
 app.use("/categories", categoriesRouter);
+app.use("/tag", tagsRouter);
 
 // custom error handler
 app.use(errorHandler);

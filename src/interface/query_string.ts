@@ -30,11 +30,17 @@ export default class QueryStringData {
   })
   pages!: number;
 
+  @ValidateIf((o) => {
+    return Object.keys(o).indexOf("id") !== -1;
+  })
   @IsNotEmpty()
   @IsInt()
   @Min(1)
   id!: number;
 
+  @ValidateIf((o) => {
+    return Object.keys(o).indexOf("slug") !== -1;
+  })
   @IsNotEmpty()
   @IsString()
   slug!: string;

@@ -1,4 +1,4 @@
-import express, { NextFunction, Request, Response } from "express";
+import express, { Request, Response } from "express";
 import { dbPool } from "config/database/connect";
 import { getErrorMsg } from "@/middleware/error-handler/error_handler";
 import { removeHTMLTags } from "@/modules/common_module";
@@ -65,17 +65,31 @@ categoriesRouter.get("/list", async (req: Request, res: Response) => {
     let category: any = req.query.category;
     let pages: any = req.query.pages;
 
+    let validateCategory = await validateQueryString({ slug: category });
+
+    let validatePage = false;
+
     if (!isNaN(Number(pages))) {
       pages = parseInt(pages);
+
+      validatePage = await validateQueryString(
+        { pages },
+        { groups: ["normalPage"] }
+      );
+    } else {
+      let validateEmpty = await validateQueryString(
+        { pages },
+        { groups: ["firstPage"] }
+      );
+
+      if (!validateEmpty) {
+        pages = 1;
+      }
+
+      validatePage = true;
     }
 
-    let validateCategory = await validateQueryString({ slug: category });
-    let validateInt = await validateQueryString(
-      { pages },
-      { groups: ["normalPage"] }
-    );
-
-    if (!validateCategory || !validateInt) {
+    if (!validateCategory || !validatePage) {
       return res.status(404).end("invalid pages");
     }
 
