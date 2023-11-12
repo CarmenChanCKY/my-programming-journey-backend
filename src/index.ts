@@ -15,10 +15,11 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
 app.use("/post", postRouter);
-app.use("/admin", adminRouter);
 app.use("/explore", searchRouter);
 app.use("/categories", categoriesRouter);
 app.use("/tag", tagsRouter);
+
+app.use("/admin", adminRouter);
 
 // custom error handler
 app.use(errorHandler);

@@ -23,11 +23,11 @@ tagsRouter.get("/all", async (req: Request, res: Response) => {
     if (Array.isArray(data) && data.length > 0) {
       res.send({ data });
     } else {
-      res.send([]);
+      return res.status(404).send("tags not found");
     }
   } catch (error) {
     console.log(error);
-    return res.status(500).end(getErrorMsg("500", error));
+    return res.status(500).send(getErrorMsg("500", error));
   }
 });
 
@@ -64,7 +64,7 @@ tagsRouter.get("/list", async (req: Request, res: Response) => {
     }
 
     if (!validateTag || !validatePage) {
-      return res.status(404).end("invalid pages");
+      return res.status(404).send("invalid pages");
     }
 
     const limit: number = 10;
@@ -73,6 +73,7 @@ tagsRouter.get("/list", async (req: Request, res: Response) => {
     tag = tag.toString().trim();
 
     const resultData: Array<any> = [];
+    let total: number = 0;
 
     // search for related post
     const searchQuery = `SELECT t1.post_id, JSON_ARRAYAGG(t2.tags_id) AS tags_id_list
@@ -126,7 +127,21 @@ tagsRouter.get("/list", async (req: Request, res: Response) => {
       const [postResult] = await dbPool.execute(postQuery, [...postIDList]);
       const postData = JSON.parse(JSON.stringify(postResult));
 
-      if (Array.isArray(postData) && postData.length > 0) {
+      // get total
+      const totalQuery = `SELECT COUNT(post.id) AS post_total
+          FROM post AS post
+          WHERE post.data_status = 'active'
+            AND post.id IN (${fillArr.join(",")})`;
+
+      const [totalResult] = await dbPool.execute(totalQuery, [...postIDList]);
+      const posTotal = JSON.parse(JSON.stringify(totalResult));
+
+      if (
+        Array.isArray(postData) &&
+        Array.isArray(posTotal) &&
+        postData.length > 0 &&
+        posTotal.length > 0
+      ) {
         // get tag data
         const tagsQuery = `SELECT tags.id, tags.name
                          FROM tags
@@ -150,10 +165,12 @@ tagsRouter.get("/list", async (req: Request, res: Response) => {
 
               if (relatedTags.length > 0) {
                 postData[i].content = removeHTMLTags(postData[i].content);
-                resultData.push({ ...postData[i], tags: relatedTags });
+                resultData.push({ ...postData[i], tags_data: relatedTags });
               }
             }
           }
+
+          total = posTotal[0].post_total;
 
           searchFail = false;
         }
@@ -161,13 +178,13 @@ tagsRouter.get("/list", async (req: Request, res: Response) => {
     }
 
     if (searchFail) {
-      res.send([]);
+      return res.status(404).send("record not found");
     } else {
-      res.send(resultData);
+      res.send({ data: resultData, total });
     }
   } catch (error) {
     console.log(error);
-    return res.status(500).end(getErrorMsg("500", error));
+    return res.status(500).send(getErrorMsg("500", error));
   }
 });
 

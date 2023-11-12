@@ -19,7 +19,7 @@ postRouter.get("/list", async (req: Request, res: Response) => {
       );
 
       if (!validateInt) {
-        return res.status(404).end("invalid pages");
+        return res.status(404).send("invalid pages");
       }
     } else {
       let validateEmpty = await validateQueryString(
@@ -71,11 +71,11 @@ postRouter.get("/list", async (req: Request, res: Response) => {
 
       res.send({ data, total: total[0].post_total });
     } else {
-      return res.status(404).end("record not found");
+      return res.status(404).send("record not found");
     }
   } catch (error) {
     console.log(error);
-    return res.status(500).end(getErrorMsg("500", error));
+    return res.status(500).send(getErrorMsg("500", error));
   }
 });
 
@@ -85,7 +85,7 @@ postRouter.get("/detail", async (req: Request, res: Response) => {
 
     let validateEmpty = await validateQueryString({ slug: postSlug });
     if (!validateEmpty) {
-      return res.status(404).end("invalid post slug");
+      return res.status(404).send("invalid post slug");
     }
 
     const query = `SELECT post.id, post.title, post.date, post.content, post.slug, post.category_id,
@@ -112,11 +112,11 @@ postRouter.get("/detail", async (req: Request, res: Response) => {
     if (Array.isArray(data) && data.length > 0) {
       res.send(data[0]);
     } else {
-      return res.status(404).end("record not found");
+      return res.status(404).send("record not found");
     }
   } catch (error) {
     console.log(error);
-    return res.status(500).end(getErrorMsg("500", error));
+    return res.status(500).send(getErrorMsg("500", error));
   }
 });
 
@@ -131,7 +131,7 @@ postRouter.get("/next", async (req: Request, res: Response) => {
     let validateID = await validateQueryString({ id });
 
     if (!validateID) {
-      return res.status(404).end("invalid id");
+      return res.status(404).send("invalid id");
     }
 
     const query = `SELECT title, slug FROM post WHERE id > ? ORDER BY date ASC, id ASC LIMIT 1 OFFSET 0`;
@@ -142,11 +142,11 @@ postRouter.get("/next", async (req: Request, res: Response) => {
     if (Array.isArray(data) && data.length > 0) {
       res.send(data[0]);
     } else {
-      res.send({});
+      res.status(404).send("record not found");
     }
   } catch (error) {
     console.log(error);
-    return res.status(500).end(getErrorMsg("500", error));
+    return res.status(500).send(getErrorMsg("500", error));
   }
 });
 
@@ -161,7 +161,7 @@ postRouter.get("/previous", async (req: Request, res: Response) => {
     let validateID = await validateQueryString({ id });
 
     if (!validateID) {
-      return res.status(404).end("invalid id");
+      return res.status(404).send("invalid id");
     }
 
     const query = `SELECT title, slug FROM post WHERE id < ? ORDER BY date DESC, id DESC LIMIT 1 OFFSET 0`;
@@ -176,7 +176,76 @@ postRouter.get("/previous", async (req: Request, res: Response) => {
     }
   } catch (error) {
     console.log(error);
-    return res.status(500).end(getErrorMsg("500", error));
+    return res.status(500).send(getErrorMsg("500", error));
+  }
+});
+
+postRouter.get("/archive", async (req: Request, res: Response) => {
+  try {
+    let pages: any = req.query.pages;
+
+    let pagingStr = "";
+    if (pages != undefined && pages != null) {
+      if (!isNaN(Number(pages))) {
+        pages = parseInt(pages);
+
+        let validateInt = await validateQueryString(
+          { pages },
+          { groups: ["normalPage"] }
+        );
+
+        if (!validateInt) {
+          return res.status(404).send("invalid pages");
+        }
+      } else {
+        let validateEmpty = await validateQueryString(
+          { pages },
+          { groups: ["firstPage"] }
+        );
+
+        if (!validateEmpty) {
+          pages = 1;
+        }
+      }
+
+      const limit: number = 10;
+      pages = (parseInt(pages.toString()) - 1) * limit;
+
+      pagingStr = `LIMIT ${limit} OFFSET ${pages}`;
+    }
+
+    const query = `SELECT SUBSTRING_INDEX(p.date, '-', 2) as post_year_month,
+                    JSON_ARRAYAGG(JSON_OBJECT('date', p.date, 'title', p.title, 'slug', p.slug)) as post_list
+                  FROM (SELECT post.date, post.title, post.slug
+                        FROM post
+                        WHERE post.data_status = 'active'
+                        ORDER BY post.date DESC , post.id DESC ${pagingStr}) AS p
+                  GROUP BY SUBSTRING_INDEX(p.date, '-', 2)
+                  ORDER BY SUBSTRING_INDEX(p.date, '-', 2) DESC`;
+
+    const [result] = await dbPool.execute(query, []);
+
+    const totalQuery = `SELECT COUNT(post.id) AS post_total
+                        FROM post AS post
+                        WHERE post.data_status = 'active'`;
+
+    const [totalResult] = await dbPool.execute(totalQuery, []);
+    const data = JSON.parse(JSON.stringify(result));
+    const total = JSON.parse(JSON.stringify(totalResult));
+
+    if (
+      Array.isArray(data) &&
+      Array.isArray(total) &&
+      data.length > 0 &&
+      total.length > 0
+    ) {
+      res.send({ data, total: total[0].post_total });
+    } else {
+      return res.status(404).send("record not found");
+    }
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send(getErrorMsg("500", error));
   }
 });
 

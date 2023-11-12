@@ -52,7 +52,7 @@ categoriesRouter.get("/all", async (req: Request, res: Response) => {
 
       res.send({ postList: resultData, categoryList: groupData });
     } else {
-      res.send([]);
+      return res.status(404).end("category not found");
     }
   } catch (error) {
     console.log(error);
@@ -136,7 +136,7 @@ categoriesRouter.get("/list", async (req: Request, res: Response) => {
 
       res.send({ data, total: total[0].post_total });
     } else {
-      res.send([]);
+      return res.status(404).end("record not found");
     }
   } catch (error) {
     console.log(error);
