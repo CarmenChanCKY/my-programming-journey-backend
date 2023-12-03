@@ -142,7 +142,7 @@ postRouter.get("/next", async (req: Request, res: Response) => {
     if (Array.isArray(data) && data.length > 0) {
       res.send(data[0]);
     } else {
-      res.status(404).send("record not found");
+      res.send({});
     }
   } catch (error) {
     console.log(error);
