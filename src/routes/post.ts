@@ -88,7 +88,7 @@ postRouter.get("/detail", async (req: Request, res: Response) => {
       return res.status(404).send("invalid post slug");
     }
 
-    const query = `SELECT post.id, post.title, post.date, post.content, post.slug, post.category_id,
+    const query = `SELECT post.id, post.title, post.date, post.content, post.slug, post.category_id, post.meta_description, post.meta_keyword,
                       category.name AS category_name, tag.tags_data, reference.reference_array
                     FROM post
                     LEFT JOIN category ON category.id = post.category_id AND category.data_status = 'active'
@@ -110,6 +110,26 @@ postRouter.get("/detail", async (req: Request, res: Response) => {
     const data = JSON.parse(JSON.stringify(result));
 
     if (Array.isArray(data) && data.length > 0) {
+      if (
+        data[0].meta_keyword === undefined ||
+        data[0].meta_keyword === null ||
+        data[0].meta_keyword === ""
+      ) {
+        if (
+          data[0].tags_data !== undefined &&
+          data[0].tags_data !== null &&
+          data[0].tags_data != ""
+        ) {
+          data[0].meta_keyword = data[0].tags_data
+            .map((obj: any) => {
+              return obj.name;
+            })
+            .join(", ");
+        } else {
+          data[0].meta_keyword = "";
+        }
+      }
+
       res.send(data[0]);
     } else {
       return res.status(404).send("record not found");
