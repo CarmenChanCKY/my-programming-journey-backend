@@ -1,4 +1,4 @@
-import express, { Request, Response } from "express";
+import express, { NextFunction, Request, Response } from "express";
 import { dbPool } from "config/database/connect";
 import { getErrorMsg } from "@/middleware/error-handler/error_handler";
 import { validateQueryString } from "@/middleware/validator/query_validate";
@@ -6,36 +6,48 @@ import { removeHTMLTags } from "@/modules/common_module";
 
 const postRouter = express.Router();
 
-postRouter.get("/list", async (req: Request, res: Response) => {
-  try {
-    let pages: any = req.query.pages;
+postRouter.get(
+  "/list",
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      let pages: any = req.query.pages;
 
-    if (!isNaN(Number(pages))) {
-      pages = parseInt(pages);
+      let error = true;
 
-      let validateInt = await validateQueryString(
-        { pages },
-        { groups: ["normalPage"] }
-      );
+      if (pages !== undefined && pages !== null && pages !== "") {
+        if (!isNaN(pages)) {
+          pages = parseInt(pages);
 
-      if (!validateInt) {
-        return res.status(404).send("invalid pages");
+          let validateInt = await validateQueryString(
+            { pages },
+            { groups: ["normalPage"] }
+          );
+
+          if (validateInt) {
+            error = false;
+          }
+        }
+      } else {
+        let validateEmpty = await validateQueryString(
+          { pages },
+          { groups: ["firstPage"] }
+        );
+
+        if (!validateEmpty) {
+          pages = 1;
+          error = false;
+        }
       }
-    } else {
-      let validateEmpty = await validateQueryString(
-        { pages },
-        { groups: ["firstPage"] }
-      );
 
-      if (!validateEmpty) {
-        pages = 1;
+      if (error) {
+        next(getErrorMsg("404", "invalid pages"));
+        return;
       }
-    }
 
-    const limit: number = 10;
-    pages = (parseInt(pages.toString()) - 1) * limit;
+      const limit: number = 10;
+      pages = (parseInt(pages.toString()) - 1) * limit;
 
-    const query = `SELECT post.title, post.date, post.content, post.slug, post.category_id,
+      const query = `SELECT post.title, post.date, post.content, post.slug, post.category_id,
                       category.name AS category_name, tag.tags_data
                   FROM post
                   LEFT JOIN category on category.id = post.category_id AND category.data_status = 'active'
@@ -49,46 +61,51 @@ postRouter.get("/list", async (req: Request, res: Response) => {
                   ORDER BY post.date DESC , post.id DESC
                   LIMIT ${limit} OFFSET ${pages}`;
 
-    const [result] = await dbPool.execute(query, []);
+      const [result] = await dbPool.execute(query, []);
 
-    const totalQuery = `SELECT COUNT(post.id) AS post_total
+      const totalQuery = `SELECT COUNT(post.id) AS post_total
                         FROM post AS post
                         WHERE post.data_status = 'active'`;
 
-    const [totalResult] = await dbPool.execute(totalQuery, []);
-    const data = JSON.parse(JSON.stringify(result));
-    const total = JSON.parse(JSON.stringify(totalResult));
+      const [totalResult] = await dbPool.execute(totalQuery, []);
+      const data = JSON.parse(JSON.stringify(result));
+      const total = JSON.parse(JSON.stringify(totalResult));
 
-    if (
-      Array.isArray(data) &&
-      Array.isArray(total) &&
-      data.length > 0 &&
-      total.length > 0
-    ) {
-      for (let i = 0; i < data.length; i++) {
-        data[i].content = removeHTMLTags(data[i].content);
+      if (
+        Array.isArray(data) &&
+        Array.isArray(total) &&
+        data.length > 0 &&
+        total.length > 0
+      ) {
+        for (let i = 0; i < data.length; i++) {
+          data[i].content = removeHTMLTags(data[i].content);
+        }
+
+        res.send({ data, total: total[0].post_total });
+      } else {
+        return res.send([]);
+      }
+    } catch (error) {
+      console.log(error);
+      next(getErrorMsg("500", "", error));
+      return;
+    }
+  }
+);
+
+postRouter.get(
+  "/detail",
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      let postSlug: any = req.query.slug;
+
+      let validateEmpty = await validateQueryString({ slug: postSlug });
+      if (!validateEmpty) {
+        next(getErrorMsg("404", "invalid post slug"));
+        return;
       }
 
-      res.send({ data, total: total[0].post_total });
-    } else {
-      return res.status(404).send("record not found");
-    }
-  } catch (error) {
-    console.log(error);
-    return res.status(500).send(getErrorMsg("500", error));
-  }
-});
-
-postRouter.get("/detail", async (req: Request, res: Response) => {
-  try {
-    let postSlug: any = req.query.slug;
-
-    let validateEmpty = await validateQueryString({ slug: postSlug });
-    if (!validateEmpty) {
-      return res.status(404).send("invalid post slug");
-    }
-
-    const query = `SELECT post.id, post.title, post.date, post.content, post.slug, post.category_id, post.meta_description, post.meta_keyword,
+      const query = `SELECT post.id, post.title, post.date, post.content, post.slug, post.category_id, post.meta_description, post.meta_keyword,
                       category.name AS category_name, tag.tags_data, reference.reference_array
                     FROM post
                     LEFT JOIN category ON category.id = post.category_id AND category.data_status = 'active'
@@ -105,136 +122,149 @@ postRouter.get("/detail", async (req: Request, res: Response) => {
                       group by post_reference.post_id) AS reference ON post.id = reference.post_id
                     WHERE post.data_status = 'active' AND post.slug = ?`;
 
-    const [result] = await dbPool.execute(query, [postSlug]);
+      const [result] = await dbPool.execute(query, [postSlug]);
 
-    const data = JSON.parse(JSON.stringify(result));
+      const data = JSON.parse(JSON.stringify(result));
 
-    if (Array.isArray(data) && data.length > 0) {
-      if (
-        data[0].meta_keyword === undefined ||
-        data[0].meta_keyword === null ||
-        data[0].meta_keyword === ""
-      ) {
+      if (Array.isArray(data) && data.length > 0) {
         if (
-          data[0].tags_data !== undefined &&
-          data[0].tags_data !== null &&
-          data[0].tags_data != ""
+          data[0].meta_keyword === undefined ||
+          data[0].meta_keyword === null ||
+          data[0].meta_keyword === ""
         ) {
-          data[0].meta_keyword = data[0].tags_data
-            .map((obj: any) => {
-              return obj.name;
-            })
-            .join(", ");
-        } else {
-          data[0].meta_keyword = "";
+          if (
+            data[0].tags_data !== undefined &&
+            data[0].tags_data !== null &&
+            data[0].tags_data != ""
+          ) {
+            data[0].meta_keyword = data[0].tags_data
+              .map((obj: any) => {
+                return obj.name;
+              })
+              .join(", ");
+          } else {
+            data[0].meta_keyword = "";
+          }
         }
-      }
 
-      res.send(data[0]);
-    } else {
-      return res.status(404).send("record not found");
-    }
-  } catch (error) {
-    console.log(error);
-    return res.status(500).send(getErrorMsg("500", error));
-  }
-});
-
-postRouter.get("/next", async (req: Request, res: Response) => {
-  try {
-    let id: any = req.query.id;
-
-    if (!isNaN(Number(id))) {
-      id = parseInt(id);
-    }
-
-    let validateID = await validateQueryString({ id });
-
-    if (!validateID) {
-      return res.status(404).send("invalid id");
-    }
-
-    const query = `SELECT title, slug FROM post WHERE id > ? ORDER BY date ASC, id ASC LIMIT 1 OFFSET 0`;
-
-    const [result] = await dbPool.execute(query, [id]);
-    const data = JSON.parse(JSON.stringify(result));
-
-    if (Array.isArray(data) && data.length > 0) {
-      res.send(data[0]);
-    } else {
-      res.send({});
-    }
-  } catch (error) {
-    console.log(error);
-    return res.status(500).send(getErrorMsg("500", error));
-  }
-});
-
-postRouter.get("/previous", async (req: Request, res: Response) => {
-  try {
-    let id: any = req.query.id;
-
-    if (!isNaN(Number(id))) {
-      id = parseInt(id);
-    }
-
-    let validateID = await validateQueryString({ id });
-
-    if (!validateID) {
-      return res.status(404).send("invalid id");
-    }
-
-    const query = `SELECT title, slug FROM post WHERE id < ? ORDER BY date DESC, id DESC LIMIT 1 OFFSET 0`;
-
-    const [result] = await dbPool.execute(query, [id]);
-    const data = JSON.parse(JSON.stringify(result));
-
-    if (Array.isArray(data) && data.length > 0) {
-      res.send(data[0]);
-    } else {
-      res.send({});
-    }
-  } catch (error) {
-    console.log(error);
-    return res.status(500).send(getErrorMsg("500", error));
-  }
-});
-
-postRouter.get("/archive", async (req: Request, res: Response) => {
-  try {
-    let pages: any = req.query.pages;
-
-    let pagingStr = "";
-    if (pages != undefined && pages != null) {
-      if (!isNaN(Number(pages))) {
-        pages = parseInt(pages);
-
-        let validateInt = await validateQueryString(
-          { pages },
-          { groups: ["normalPage"] }
-        );
-
-        if (!validateInt) {
-          return res.status(404).send("invalid pages");
-        }
+        res.send(data[0]);
       } else {
-        let validateEmpty = await validateQueryString(
-          { pages },
-          { groups: ["firstPage"] }
-        );
+        next(getErrorMsg("404", "record not found"));
+        return;
+      }
+    } catch (error) {
+      console.log(error);
+      next(getErrorMsg("500", "", error));
+      return;
+    }
+  }
+);
 
-        if (!validateEmpty) {
-          pages = 1;
-        }
+postRouter.get(
+  "/next",
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      let id: any = req.query.id;
+
+      if (!isNaN(Number(id))) {
+        id = parseInt(id);
       }
 
-      const limit: number = 10;
-      pages = (parseInt(pages.toString()) - 1) * limit;
+      let validateID = await validateQueryString({ id });
 
-      pagingStr = `LIMIT ${limit} OFFSET ${pages}`;
+      if (!validateID) {
+        next(getErrorMsg("404", "invalid id"));
+        return;
+      }
+
+      const query = `SELECT title, slug FROM post WHERE id > ? ORDER BY date ASC, id ASC LIMIT 1 OFFSET 0`;
+
+      const [result] = await dbPool.execute(query, [id]);
+      const data = JSON.parse(JSON.stringify(result));
+
+      if (Array.isArray(data) && data.length > 0) {
+        res.send(data[0]);
+      } else {
+        res.send({});
+      }
+    } catch (error) {
+      console.log(error);
+      next(getErrorMsg("500", "", error));
+      return;
     }
+  }
+);
 
-    const query = `SELECT SUBSTRING_INDEX(p.date, '-', 2) as post_year_month,
+postRouter.get(
+  "/previous",
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      let id: any = req.query.id;
+
+      if (!isNaN(Number(id))) {
+        id = parseInt(id);
+      }
+
+      let validateID = await validateQueryString({ id });
+
+      if (!validateID) {
+        next(getErrorMsg("404", "invalid id"));
+        return;
+      }
+
+      const query = `SELECT title, slug FROM post WHERE id < ? ORDER BY date DESC, id DESC LIMIT 1 OFFSET 0`;
+
+      const [result] = await dbPool.execute(query, [id]);
+      const data = JSON.parse(JSON.stringify(result));
+
+      if (Array.isArray(data) && data.length > 0) {
+        res.send(data[0]);
+      } else {
+        res.send({});
+      }
+    } catch (error) {
+      console.log(error);
+      next(getErrorMsg("500", "", error));
+      return;
+    }
+  }
+);
+
+postRouter.get(
+  "/archive",
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      let pages: any = req.query.pages;
+
+      let pagingStr = "";
+      if (pages != undefined && pages != null && pages !== "") {
+        let error = true;
+
+        if (!isNaN(pages)) {
+          pages = parseInt(pages);
+
+          let validateInt = await validateQueryString(
+            { pages },
+            { groups: ["normalPage"] }
+          );
+
+          if (validateInt) {
+            error = false;
+          }
+        }
+
+        if (error) {
+          next(getErrorMsg("404", "invalid pages"));
+          return;
+        }
+
+        const limit: number = 10;
+        pages = (parseInt(pages.toString()) - 1) * limit;
+
+        pagingStr = `LIMIT ${limit} OFFSET ${pages}`;
+      }
+
+      const query = `SELECT SUBSTRING_INDEX(p.date, '-', 2) as post_year_month,
                     JSON_ARRAYAGG(JSON_OBJECT('date', p.date, 'title', p.title, 'slug', p.slug)) as post_list
                   FROM (SELECT post.date, post.title, post.slug
                         FROM post
@@ -243,30 +273,32 @@ postRouter.get("/archive", async (req: Request, res: Response) => {
                   GROUP BY SUBSTRING_INDEX(p.date, '-', 2)
                   ORDER BY SUBSTRING_INDEX(p.date, '-', 2) DESC`;
 
-    const [result] = await dbPool.execute(query, []);
+      const [result] = await dbPool.execute(query, []);
 
-    const totalQuery = `SELECT COUNT(post.id) AS post_total
+      const totalQuery = `SELECT COUNT(post.id) AS post_total
                         FROM post AS post
                         WHERE post.data_status = 'active'`;
 
-    const [totalResult] = await dbPool.execute(totalQuery, []);
-    const data = JSON.parse(JSON.stringify(result));
-    const total = JSON.parse(JSON.stringify(totalResult));
+      const [totalResult] = await dbPool.execute(totalQuery, []);
+      const data = JSON.parse(JSON.stringify(result));
+      const total = JSON.parse(JSON.stringify(totalResult));
 
-    if (
-      Array.isArray(data) &&
-      Array.isArray(total) &&
-      data.length > 0 &&
-      total.length > 0
-    ) {
-      res.send({ data, total: total[0].post_total });
-    } else {
-      return res.status(404).send("record not found");
+      if (
+        Array.isArray(data) &&
+        Array.isArray(total) &&
+        data.length > 0 &&
+        total.length > 0
+      ) {
+        res.send({ data, total: total[0].post_total });
+      } else {
+        return res.send([]);
+      }
+    } catch (error) {
+      console.log(error);
+      next(getErrorMsg("500", "", error));
+      return;
     }
-  } catch (error) {
-    console.log(error);
-    return res.status(500).send(getErrorMsg("500", error));
   }
-});
+);
 
 export default postRouter;

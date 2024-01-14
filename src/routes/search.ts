@@ -1,4 +1,4 @@
-import express, { Request, Response } from "express";
+import express, { NextFunction, Request, Response } from "express";
 import { dbPool } from "config/database/connect";
 import { getErrorMsg } from "@/middleware/error-handler/error_handler";
 import { removeHTMLTags } from "@/modules/common_module";
@@ -6,58 +6,62 @@ import { validateQueryString } from "@/middleware/validator/query_validate";
 
 const searchRouter = express.Router();
 
-searchRouter.get("/post", async (req: Request, res: Response) => {
-  try {
-    let keyword: any = req.query.keyword;
-    let pages: any = req.query.pages;
+searchRouter.get(
+  "/post",
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      let keyword: any = req.query.keyword;
+      let pages: any = req.query.pages;
 
-    let validateKeyword = await validateQueryString({ slug: keyword });
+      let validateKeyword = await validateQueryString({ slug: keyword });
 
-    let validatePage = false;
+      let validatePage = false;
 
-    if (!isNaN(Number(pages))) {
-      pages = parseInt(pages);
+      if (pages !== undefined && pages !== null && pages !== "") {
+        if (!isNaN(pages)) {
+          pages = parseInt(pages);
 
-      validatePage = await validateQueryString(
-        { pages },
-        { groups: ["normalPage"] }
-      );
-    } else {
-      let validateEmpty = await validateQueryString(
-        { pages },
-        { groups: ["firstPage"] }
-      );
+          validatePage = await validateQueryString(
+            { pages },
+            { groups: ["normalPage"] }
+          );
+        }
+      } else {
+        let validateEmpty = await validateQueryString(
+          { pages },
+          { groups: ["firstPage"] }
+        );
 
-      if (!validateEmpty) {
-        pages = 1;
+        if (!validateEmpty) {
+          pages = 1;
+          validatePage = true;
+        }
       }
 
-      validatePage = true;
-    }
+      if (!validateKeyword || !validatePage) {
+        next(getErrorMsg("404", "invalid pages"));
+        return;
+      }
 
-    if (!validateKeyword || !validatePage) {
-      return res.status(404).end("invalid pages");
-    }
+      const limit: number = 10;
+      pages = (parseInt(pages.toString()) - 1) * limit;
 
-    const limit: number = 10;
-    pages = (parseInt(pages.toString()) - 1) * limit;
+      keyword = keyword.toString().trim();
 
-    keyword = keyword.toString().trim();
+      const startStr = dbPool.escape("\\b" + keyword);
+      const middleStr = dbPool.escape("\\b" + keyword + "\\b");
+      const endStr = dbPool.escape(keyword + "\\b");
 
-    const startStr = dbPool.escape("\\b" + keyword);
-    const middleStr = dbPool.escape("\\b" + keyword + "\\b");
-    const endStr = dbPool.escape(keyword + "\\b");
+      // query for search title
+      const compareTitle = "LOWER(post.title)";
+      const titleQuery = `${compareTitle} REGEXP ${startStr} OR ${compareTitle} REGEXP ${endStr} OR ${compareTitle} REGEXP ${middleStr}`;
 
-    // query for search title
-    const compareTitle = "LOWER(post.title)";
-    const titleQuery = `${compareTitle} REGEXP ${startStr} OR ${compareTitle} REGEXP ${endStr} OR ${compareTitle} REGEXP ${middleStr}`;
+      // query for search content
+      const compareContent =
+        "LOWER(REGEXP_REPLACE(post.content, '(<[^>]*>)|(&nbsp;)', ''))";
+      const contentQuery = `${compareContent} REGEXP ${startStr} OR ${compareContent} REGEXP ${endStr} OR ${compareContent} REGEXP ${middleStr}`;
 
-    // query for search content
-    const compareContent =
-      "LOWER(REGEXP_REPLACE(post.content, '(<[^>]*>)|(&nbsp;)', ''))";
-    const contentQuery = `${compareContent} REGEXP ${startStr} OR ${compareContent} REGEXP ${endStr} OR ${compareContent} REGEXP ${middleStr}`;
-
-    const query = `SELECT post.title, post.date, post.content, post.slug, post.category_id,
+      const query = `SELECT post.title, post.date, post.content, post.slug, post.category_id,
                         category.name AS category_name, tag.tags_data
                     FROM post
                     LEFT JOIN category ON category.id = post.category_id AND category.data_status = 'active'
@@ -72,36 +76,40 @@ searchRouter.get("/post", async (req: Request, res: Response) => {
                     ORDER BY post.date DESC , post.id DESC
                     LIMIT ${limit} OFFSET ${pages}`;
 
-    const [result] = await dbPool.execute(query);
+      const [result] = await dbPool.execute(query);
 
-    const totalQuery = `SELECT COUNT(post.id) AS post_total
+      const totalQuery = `SELECT COUNT(post.id) AS post_total
                         FROM post AS post
                         WHERE post.data_status = 'active'
                         AND (${titleQuery} OR ${contentQuery})`;
 
-    const [totalResult] = await dbPool.execute(totalQuery, [keyword, keyword]);
+      const [totalResult] = await dbPool.execute(totalQuery, [
+        keyword,
+        keyword,
+      ]);
 
-    const data = JSON.parse(JSON.stringify(result));
-    const total = JSON.parse(JSON.stringify(totalResult));
+      const data = JSON.parse(JSON.stringify(result));
+      const total = JSON.parse(JSON.stringify(totalResult));
 
-    if (
-      Array.isArray(data) &&
-      Array.isArray(total) &&
-      data.length > 0 &&
-      total.length > 0
-    ) {
-      for (let i = 0; i < data.length; i++) {
-        data[i].content = removeHTMLTags(data[i].content);
+      if (
+        Array.isArray(data) &&
+        Array.isArray(total) &&
+        data.length > 0 &&
+        total.length > 0
+      ) {
+        for (let i = 0; i < data.length; i++) {
+          data[i].content = removeHTMLTags(data[i].content);
+        }
+
+        res.send({ data, total: total[0].post_total });
+      } else {
+        return res.send([]);
       }
-
-      res.send({ data, total: total[0].post_total });
-    } else {
-      return res.status(404).end("record not found");
+    } catch (error) {
+      console.log(error);
+      return next(getErrorMsg("500", "", error));
     }
-  } catch (error) {
-    console.log(error);
-    return res.status(500).end(getErrorMsg("500", error));
   }
-});
+);
 
 export default searchRouter;

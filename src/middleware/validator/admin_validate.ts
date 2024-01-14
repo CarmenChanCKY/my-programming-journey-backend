@@ -20,7 +20,7 @@ const validateAdminRegex = async (
     });
     next();
   } catch (error) {
-    const errorMsg = getErrorMsg("422", error);
+    const errorMsg = getErrorMsg("422", "", error);
     next(errorMsg);
   }
 };

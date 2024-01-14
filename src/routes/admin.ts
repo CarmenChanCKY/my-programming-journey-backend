@@ -1,4 +1,4 @@
-import express, { Request, Response } from "express";
+import express, { NextFunction, Request, Response } from "express";
 import { validateAdminRegex } from "@/middleware/validator/admin_validate";
 import { dbPool } from "config/database/connect";
 import {
@@ -14,7 +14,7 @@ const adminRouter = express.Router();
 adminRouter.post(
   "/register",
   validateAdminRegex,
-  async (req: Request, res: Response) => {
+  async (req: Request, res: Response, next: NextFunction) => {
     try {
       const email = req.body.email.trim();
       const plainPW = req.body.password.trim();
@@ -23,7 +23,8 @@ adminRouter.post(
       const searchEmailQuery = `SELECT * FROM admin_data WHERE email = ?`;
       const [emailResult] = await dbPool.execute(searchEmailQuery, [email]);
       if (Array.isArray(emailResult) && emailResult.length > 0) {
-        return res.status(422).end("email exists");
+        next(getErrorMsg("422", "email exists"));
+        return;
       }
 
       // generate password salt
@@ -38,12 +39,14 @@ adminRouter.post(
         salt,
       ]);
       if (Array.isArray(registerUser) && registerUser.length <= 0) {
-        return res.status(422).end("register fail");
+        next(getErrorMsg("422", "register fail"));
+        return;
       }
 
       res.send(registerUser);
     } catch (error) {
-      return res.status(500).end(getErrorMsg("500", error));
+      next(getErrorMsg("500", "", error));
+      return;
     }
   }
 );
@@ -51,7 +54,7 @@ adminRouter.post(
 adminRouter.post(
   "/login",
   validateAdminRegex,
-  async (req: Request, res: Response) => {
+  async (req: Request, res: Response, next: NextFunction) => {
     try {
       const email = req.body.email.trim();
       const plainPW = req.body.password.trim();
@@ -60,7 +63,8 @@ adminRouter.post(
       const searchQuery = "SELECT salt FROM admin_data WHERE email = ?";
       const [emailResult] = await dbPool.execute(searchQuery, [email]);
       if (Array.isArray(emailResult) && emailResult.length <= 0) {
-        return res.status(401).end("email or password not match");
+        next(getErrorMsg("401", "email or password not match"));
+        return;
       }
 
       // check password
@@ -73,7 +77,8 @@ adminRouter.post(
         "SELECT * FROM admin_data WHERE email = ? AND password = ?";
       const [checkResult] = await dbPool.execute(checkPwQuery, [email, hashPW]);
       if (Array.isArray(checkResult) && checkResult.length <= 0) {
-        return res.status(401).end("email or password not match");
+        next(getErrorMsg("401", "email or password not match"));
+        return;
       }
 
       const result2 = JSON.parse(JSON.stringify(checkResult));
@@ -85,7 +90,8 @@ adminRouter.post(
 
       res.send(jwtToken);
     } catch (error) {
-      return res.status(500).end("Login Fail");
+      next(getErrorMsg("500", "", error));
+      return;
     }
   }
 );

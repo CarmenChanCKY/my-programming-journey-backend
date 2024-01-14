@@ -3,9 +3,17 @@
     "name": "Unauthorized",
     "description": "The client must authenticate itself to get the requested response"
   },
+  "404": {
+    "name": "Not Found",
+    "description": "Requested resource not found"
+  },
   "422": {
-    "name": "Unprocessable Entity - Invalid Input",
+    "name": "Invalid Input",
     "description": "The request was well-formed but was unable to be followed due to semantic errors"
+  },
+  "429": {
+    "name": "Too Many Requests",
+    "description": "Too many requests, please try again later."
   },
   "500": {
     "name": "Internal Server Error",
