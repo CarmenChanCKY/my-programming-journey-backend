@@ -1,5 +1,4 @@
 import { NextFunction, Request, Response } from "express";
-import { getCurrentEnvironment } from "config/env/env";
 const codeList = require("@/middleware/error-handler/code_list.json");
 
 const getErrorMsg = (
@@ -39,7 +38,7 @@ const errorHandler = (
     status: code,
     name: errorName,
     description,
-    stack: getCurrentEnvironment() === "development" ? stack : {},
+    stack: process.env.NODE_ENV === "development" ? stack : {},
   });
 };
 

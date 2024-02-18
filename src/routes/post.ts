@@ -3,6 +3,7 @@ import { dbPool } from "config/database/connect";
 import { getErrorMsg } from "@/middleware/error-handler/error_handler";
 import { validateQueryString } from "@/middleware/validator/query_validate";
 import { removeHTMLTags } from "@/modules/common_module";
+import { writeConsoleLog } from "@/modules/logger";
 
 const postRouter = express.Router();
 
@@ -28,15 +29,8 @@ postRouter.get(
           }
         }
       } else {
-        let validateEmpty = await validateQueryString(
-          { pages },
-          { groups: ["firstPage"] }
-        );
-
-        if (!validateEmpty) {
-          pages = 1;
-          error = false;
-        }
+        pages = 1;
+        error = false;
       }
 
       if (error) {
@@ -86,7 +80,7 @@ postRouter.get(
         return res.send([]);
       }
     } catch (error) {
-      console.log(error);
+      writeConsoleLog("error", `Post /list error.\n${error}`);
       next(getErrorMsg("500", "", error));
       return;
     }
@@ -153,7 +147,7 @@ postRouter.get(
         return;
       }
     } catch (error) {
-      console.log(error);
+      writeConsoleLog("error", `Post /detail error.\n${error}`);
       next(getErrorMsg("500", "", error));
       return;
     }
@@ -188,7 +182,7 @@ postRouter.get(
         res.send({});
       }
     } catch (error) {
-      console.log(error);
+      writeConsoleLog("error", `Post /next error.\n${error}`);
       next(getErrorMsg("500", "", error));
       return;
     }
@@ -223,7 +217,7 @@ postRouter.get(
         res.send({});
       }
     } catch (error) {
-      console.log(error);
+      writeConsoleLog("error", `Post /previous error.\n${error}`);
       next(getErrorMsg("500", "", error));
       return;
     }
@@ -294,7 +288,7 @@ postRouter.get(
         return res.send([]);
       }
     } catch (error) {
-      console.log(error);
+      writeConsoleLog("error", `Post /archive error.\n${error}`);
       next(getErrorMsg("500", "", error));
       return;
     }

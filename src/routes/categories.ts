@@ -3,6 +3,7 @@ import { dbPool } from "config/database/connect";
 import { getErrorMsg } from "@/middleware/error-handler/error_handler";
 import { removeHTMLTags } from "@/modules/common_module";
 import { validateQueryString } from "@/middleware/validator/query_validate";
+import { writeConsoleLog } from "@/modules/logger";
 
 const categoriesRouter = express.Router();
 
@@ -57,7 +58,7 @@ categoriesRouter.get(
         res.send([]);
       }
     } catch (error) {
-      console.log(error);
+      writeConsoleLog("error", `Category /all error.\n${error}`);
       next(getErrorMsg("500", "", error));
       return;
     }
@@ -89,15 +90,8 @@ categoriesRouter.get(
           }
         }
       } else {
-        let validateEmpty = await validateQueryString(
-          { pages },
-          { groups: ["firstPage"] }
-        );
-
-        if (!validateEmpty) {
-          pages = 1;
-          validatePage = true;
-        }
+        pages = 1;
+        validatePage = true;
       }
 
       if (!validatePage) {
@@ -154,7 +148,7 @@ categoriesRouter.get(
         return res.send([]);
       }
     } catch (error) {
-      console.log(error);
+      writeConsoleLog("error", `Category /list error.\n${error}`);
       next(getErrorMsg("500", "", error));
       return;
     }

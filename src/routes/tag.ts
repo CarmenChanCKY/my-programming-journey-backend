@@ -3,6 +3,7 @@ import { dbPool } from "config/database/connect";
 import { getErrorMsg } from "@/middleware/error-handler/error_handler";
 import { removeHTMLTags } from "@/modules/common_module";
 import { validateQueryString } from "@/middleware/validator/query_validate";
+import { writeConsoleLog } from "@/modules/logger";
 
 const tagsRouter = express.Router();
 
@@ -28,7 +29,7 @@ tagsRouter.get(
         return res.send([]);
       }
     } catch (error) {
-      console.log(error);
+      writeConsoleLog("error", `Tag /all error.\n${error}`);
       next(getErrorMsg("500", "", error));
       return;
     }
@@ -55,15 +56,8 @@ tagsRouter.get(
           );
         }
       } else {
-        let validateEmpty = await validateQueryString(
-          { pages },
-          { groups: ["firstPage"] }
-        );
-
-        if (!validateEmpty) {
-          pages = 1;
-          validatePage = true;
-        }
+        pages = 1;
+        validatePage = true;
       }
 
       if (!validatePage) {
@@ -190,7 +184,7 @@ tagsRouter.get(
         res.send({ data: resultData, total });
       }
     } catch (error) {
-      console.log(error);
+      writeConsoleLog("error", `Tag /list error.\n${error}`);
       next(getErrorMsg("500", "", error));
       return;
     }

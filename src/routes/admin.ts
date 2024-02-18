@@ -8,6 +8,7 @@ import {
 } from "@/modules/admin_module";
 import { getErrorMsg } from "@/middleware/error-handler/error_handler";
 import { authenticateJWTToken } from "@/middleware/common_middleware";
+import { writeConsoleLog } from "@/modules/logger";
 
 const adminRouter = express.Router();
 
@@ -90,6 +91,7 @@ adminRouter.post(
 
       res.send(jwtToken);
     } catch (error) {
+      writeConsoleLog("error", `Admin /login error.\n${error}`);
       next(getErrorMsg("500", "", error));
       return;
     }

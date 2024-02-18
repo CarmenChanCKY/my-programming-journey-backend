@@ -3,6 +3,7 @@ import { dbPool } from "config/database/connect";
 import { getErrorMsg } from "@/middleware/error-handler/error_handler";
 import { removeHTMLTags } from "@/modules/common_module";
 import { validateQueryString } from "@/middleware/validator/query_validate";
+import { writeConsoleLog } from "@/modules/logger";
 
 const searchRouter = express.Router();
 
@@ -27,15 +28,8 @@ searchRouter.get(
           );
         }
       } else {
-        let validateEmpty = await validateQueryString(
-          { pages },
-          { groups: ["firstPage"] }
-        );
-
-        if (!validateEmpty) {
-          pages = 1;
-          validatePage = true;
-        }
+        pages = 1;
+        validatePage = true;
       }
 
       if (!validateKeyword || !validatePage) {
@@ -106,7 +100,7 @@ searchRouter.get(
         return res.send([]);
       }
     } catch (error) {
-      console.log(error);
+      writeConsoleLog("error", `Search /post error.\n${error}`);
       return next(getErrorMsg("500", "", error));
     }
   }
