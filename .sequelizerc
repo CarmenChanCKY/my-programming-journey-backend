@@ -1,0 +1,9 @@
+const path = require('path');
+
+module.exports = {
+  config: path.resolve('config', 'config.js'),
+};
+
+// TODO:
+// https://notes.andywu.tw/2022/%E4%BD%BF%E7%94%A8sequelize%E9%80%B2%E8%A1%8C%E8%B3%87%E6%96%99%E5%BA%ABmigration%E7%9A%84%E5%9F%BA%E6%9C%AC%E7%94%A8%E6%B3%95/
+// https://sequelize.org/docs/v6/other-topics/migrations/#configuration

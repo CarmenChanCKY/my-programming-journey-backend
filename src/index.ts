@@ -10,6 +10,7 @@ import {
   writeInfoLog,
   writeErrorLog,
   writeConsoleLog,
+  cmsWriteInfoLog,
 } from "src/modules/logger";
 
 const app: Express = express();
@@ -40,6 +41,22 @@ const rateLimitMiddleware = rateLimit({
   },
 });
 
+const cmsRateLimitMiddleware = rateLimit({
+  windowMs: 60 * 1000,
+  limit: process.env.NODE_ENV === "development" ? 300 : 30,
+  headers: true,
+  requestPropertyName: "MPJCMSRateLimit",
+  keyGenerator: (req, res) => {
+    return getClientIp(req) || req.ip;
+  },
+  handler: (req, res, next, options) => {
+    writeErrorLog(JSON.stringify(options));
+    res
+      .status(options.statusCode)
+      .send(getErrorMsg(options.statusCode.toString()));
+  },
+});
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
@@ -48,11 +65,13 @@ app.use("/explore", rateLimitMiddleware, searchRouter);
 app.use("/categories", rateLimitMiddleware, categoriesRouter);
 app.use("/tag", rateLimitMiddleware, tagsRouter);
 
-app.use("/admin", adminRouter);
+// for cms
+app.use("/admin", cmsRateLimitMiddleware, adminRouter);
 
 app.use(errorHandler);
 
 app.listen(port, () => {
   writeInfoLog(`Start Server at port ${port}`);
+  cmsWriteInfoLog(`Start Server at port ${port}`);
   writeConsoleLog("info", `Server is running at http://localhost:${port}`);
 });

@@ -24,7 +24,11 @@
     "express-rate-limit": "^7.1.5",
     "jsonwebtoken": "^9.0.0",
     "mysql2": "^3.0.1",
+    "nodemon": "^2.0.22",
     "request-ip": "^3.3.0",
+    "sequelize": "^6.37.3",
+    "webpack": "^4.47.0",
+    "webpack-cli": "^3.3.12",
     "winston": "^3.11.0"
   },
   "devDependencies": {
@@ -35,12 +39,10 @@
     "cross-env": "^7.0.3",
     "dotenv": "^16.0.3",
     "express": "^4.18.2",
-    "nodemon": "^2.0.20",
+    "sequelize-cli": "^6.6.2",
     "ts-loader": "^8.2.0",
     "tsconfig-paths-webpack-plugin": "^4.0.0",
     "typescript": "~4.6.4",
-    "webpack": "^4.35.0",
-    "webpack-cli": "^3.3.5",
     "webpack-node-externals": "^3.0.0",
     "webpack-shell-plugin": "^0.5.0"
   }

@@ -1,5 +1,6 @@
 node_modules
 config/env/.env.development
+config/env/.env.production
 dist
 public
 *.log
