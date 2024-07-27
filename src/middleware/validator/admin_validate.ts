@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { validateOrReject } from "class-validator";
 import { getErrorMsg } from "@/middleware/error-handler/error_handler";
 import AdminData from "@/interface/admin_data";
+import { writeConsoleLog, writeErrorLog } from "@/modules/logger";
 
 const validateAdminRegex = async (
   req: Request,
@@ -20,7 +21,9 @@ const validateAdminRegex = async (
     });
     next();
   } catch (error) {
-    const errorMsg = getErrorMsg("422", error);
+    writeErrorLog(`Validate admin regex fail.\n${error}`);
+    writeConsoleLog("error", `Validate admin regex fail.\n${error}`);
+    const errorMsg = getErrorMsg("422", "", error);
     next(errorMsg);
   }
 };

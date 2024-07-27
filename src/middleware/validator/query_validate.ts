@@ -1,5 +1,6 @@
 import { validateOrReject } from "class-validator";
 import QueryStringData from "@/interface/query_string";
+import { writeConsoleLog, writeErrorLog } from "@/modules/logger";
 
 const validateQueryString = async (
   queryObject: Object,
@@ -25,7 +26,8 @@ const validateQueryString = async (
     await validateOrReject(validateData, options);
     result = true;
   } catch (error) {
-    console.log(error);
+    writeErrorLog(`Validate query string fail.\n${error}`);
+    writeConsoleLog("error", `Validate admin regex fail.\n${error}`);
   }
 
   return result;

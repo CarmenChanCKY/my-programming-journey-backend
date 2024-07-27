@@ -1,9 +1,23 @@
 import express, { Express } from "express";
 import { getEnvironmentVar } from "config/env/env";
-import { errorHandler } from "@/middleware/error-handler/error_handler";
+import {
+  errorHandler,
+  getErrorMsg,
+} from "@/middleware/error-handler/error_handler";
+import { rateLimit } from "express-rate-limit";
+import { mw, getClientIp } from "request-ip";
+import {
+  writeInfoLog,
+  writeErrorLog,
+  writeConsoleLog,
+  cmsWriteInfoLog,
+} from "src/modules/logger";
 
 const app: Express = express();
 const port = getEnvironmentVar("PORT", 3000);
+
+app.use(mw());
+app.set("trust proxy", 1);
 
 import adminRouter from "@/routes/admin";
 import postRouter from "@/routes/post";
@@ -11,19 +25,53 @@ import searchRouter from "@/routes/search";
 import categoriesRouter from "@/routes/categories";
 import tagsRouter from "@/routes/tag";
 
+const rateLimitMiddleware = rateLimit({
+  windowMs: 60 * 1000,
+  limit: process.env.NODE_ENV === "development" ? 300 : 50,
+  headers: true,
+  requestPropertyName: "MPJPublicRateLimit",
+  keyGenerator: (req, res) => {
+    return getClientIp(req) || req.ip;
+  },
+  handler: (req, res, next, options) => {
+    writeErrorLog(JSON.stringify(options));
+    res
+      .status(options.statusCode)
+      .send(getErrorMsg(options.statusCode.toString()));
+  },
+});
+
+const cmsRateLimitMiddleware = rateLimit({
+  windowMs: 60 * 1000,
+  limit: process.env.NODE_ENV === "development" ? 300 : 30,
+  headers: true,
+  requestPropertyName: "MPJCMSRateLimit",
+  keyGenerator: (req, res) => {
+    return getClientIp(req) || req.ip;
+  },
+  handler: (req, res, next, options) => {
+    writeErrorLog(JSON.stringify(options));
+    res
+      .status(options.statusCode)
+      .send(getErrorMsg(options.statusCode.toString()));
+  },
+});
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-app.use("/post", postRouter);
-app.use("/explore", searchRouter);
-app.use("/categories", categoriesRouter);
-app.use("/tag", tagsRouter);
+app.use("/post", rateLimitMiddleware, postRouter);
+app.use("/explore", rateLimitMiddleware, searchRouter);
+app.use("/categories", rateLimitMiddleware, categoriesRouter);
+app.use("/tag", rateLimitMiddleware, tagsRouter);
 
-app.use("/admin", adminRouter);
+// for cms
+app.use("/admin", cmsRateLimitMiddleware, adminRouter);
 
-// custom error handler
 app.use(errorHandler);
 
 app.listen(port, () => {
-  console.log(`[server]: Server is running at http://localhost:${port}`);
+  writeInfoLog(`Start Server at port ${port}`);
+  cmsWriteInfoLog(`Start Server at port ${port}`);
+  writeConsoleLog("info", `Server is running at http://localhost:${port}`);
 });

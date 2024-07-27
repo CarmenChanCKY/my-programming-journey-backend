@@ -1,6 +1,6 @@
 import mysql2 from "mysql2/promise";
 import { getEnvironmentVar } from "config/env/env";
-import { getErrorMsg } from "@/middleware/error-handler/error_handler";
+import { writeConsoleLog, writeErrorLog } from "@/modules/logger";
 
 let dbPool: mysql2.Pool = mysql2.createPool({
   host: getEnvironmentVar("DB_HOST", "localhost"),
@@ -17,7 +17,12 @@ dbPool
     connection.release();
   })
   .catch((error) => {
-    throw getErrorMsg("502", error);
+    writeErrorLog(`MySQL server connection error.\n${JSON.stringify(error)}`);
+    writeConsoleLog(
+      "error",
+      `MySQL server connection error.\n${JSON.stringify(error)}`
+    );
+    throw error;
   });
 
 const getDBName = (): string => {
