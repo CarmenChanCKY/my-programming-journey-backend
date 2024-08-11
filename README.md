@@ -38,6 +38,18 @@ npm run start:dev
    npm install --save sequelize
    npm install --save-dev sequelize-cli
    ```
+2. Run ```npx sequelize-cli init``` to initialize sequelize project
+3. Create ```..sequelizerc```, set the config file path to [config/config.js](config/config.js)
+4. Create ```config.js```, input the [database configure information](https://sequelize.org/docs/v6/other-topics/migrations/#dynamic-configuration)
 
+### Create Model
+```npx sequelize-cli model:generate --name [table_name] --attributes [column_name]:[data_type],[column_name]:[data_type]```
 
-Initial Setup
+### Migrate to specific table
+```npx sequelize-cli db:migrate --to [any file inside /models]```
+
+### Migrate to all tables
+```npx sequelize-cli db:migrate```
+
+### View Migration Status
+```npx sequelize-cli db:migrate:status```
