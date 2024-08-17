@@ -1,0 +1,6 @@
+dist
+/node_modules
+.gitignore
+README.md
+.git
+!config/env/.env.development

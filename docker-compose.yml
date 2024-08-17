@@ -1,0 +1,26 @@
+version: "3.3"
+services:
+  mpj_db:
+    image: 'mysql:8.0.39'
+    restart: 'always'
+    env_file: ./config/env/.env.development
+    build:
+      args:
+        MYSQL_ROOT_PASSWORD: $${MYSQL_ROOT_PASSWORD}
+    expose:
+      - "3306"
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./docker/db/init_db.sql:/docker-entrypoint-initdb.d/init_db.sql
+  mpj_backend:
+    depends_on:
+      - mpj_db
+    env_file: ./config/env/.env.development
+    build:
+      context: .
+      dockerfile: ./docker/backend/Dockerfile
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./:/app
