@@ -17,9 +17,19 @@ const hashPassword = (plainPW: string, salt: string): string => {
 };
 
 const generateJWTToken = (data: Object): string => {
-  return jwt.sign(data, getEnvironmentVar("JWT_SECRET"), {
-    expiresIn: "2hours",
-  });
+  const current = new Date();
+  const currentTime = current.getTime();
+  return jwt.sign(
+    { ...data, iat: currentTime },
+    getEnvironmentVar("JWT_SECRET"),
+    {
+      expiresIn: "2hours",
+      jwtid: generateSalt(),
+    }
+  );
 };
+
+// TODO: refresh token
+// TODO: csrf token
 
 export { generateSalt, hashPassword, generateJWTToken };
