@@ -1,23 +1,18 @@
 import express, { Express } from "express";
 import { getEnvironmentVar } from "config/env/env";
-import {
-  errorHandler,
-  getErrorMsg,
-} from "@/middleware/error-handler/error_handler";
-import { rateLimit } from "express-rate-limit";
-import { mw, getClientIp } from "request-ip";
+import { customErrorHandler } from "@/middleware/error-handler/error_handler";
 import {
   writeInfoLog,
-  writeErrorLog,
   writeConsoleLog,
   cmsWriteInfoLog,
-} from "src/modules/logger";
-
-const app: Express = express();
-const port = getEnvironmentVar("PORT", 3000);
-
-app.use(mw());
-app.set("trust proxy", 1);
+} from "@/modules/logger";
+import {
+  initializeRateLimiter,
+  cmsRateLimitMiddleware,
+  rateLimitMiddleware,
+} from "@/middleware/rate-limiter/rate_limiter";
+import { middleware, errorHandler } from "supertokens-node/framework/express";
+import { initTokens } from "@/middleware/security-tokens/security_tokens";
 
 import adminRouter from "@/routes/admin";
 import postRouter from "@/routes/post";
@@ -25,37 +20,33 @@ import searchRouter from "@/routes/search";
 import categoriesRouter from "@/routes/categories";
 import tagsRouter from "@/routes/tag";
 
-const rateLimitMiddleware = rateLimit({
-  windowMs: 60 * 1000,
-  limit: process.env.NODE_ENV === "development" ? 300 : 50,
-  headers: true,
-  requestPropertyName: "MPJPublicRateLimit",
-  keyGenerator: (req, res) => {
-    return getClientIp(req) || req.ip;
-  },
-  handler: (req, res, next, options) => {
-    writeErrorLog(JSON.stringify(options));
-    res
-      .status(options.statusCode)
-      .send(getErrorMsg(options.statusCode.toString()));
-  },
-});
+const app: Express = express();
+const port = getEnvironmentVar("PORT", 3000);
+const helmet = require("helmet");
+const cors = require("cors");
 
-const cmsRateLimitMiddleware = rateLimit({
-  windowMs: 60 * 1000,
-  limit: process.env.NODE_ENV === "development" ? 300 : 30,
-  headers: true,
-  requestPropertyName: "MPJCMSRateLimit",
-  keyGenerator: (req, res) => {
-    return getClientIp(req) || req.ip;
-  },
-  handler: (req, res, next, options) => {
-    writeErrorLog(JSON.stringify(options));
-    res
-      .status(options.statusCode)
-      .send(getErrorMsg(options.statusCode.toString()));
-  },
-});
+// security function
+initializeRateLimiter(app);
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        "script-src": ["'self'", "https://cdn.jsdelivr.net", "'unsafe-inline'","'unsafe-eval'"],
+        "img-src": ["'self'", "https://cdn.jsdelivr.net"],
+      },
+    },
+  })
+);
+
+const supertokens = initTokens();
+app.use(
+  cors({
+    origin: getEnvironmentVar("AUTH_WEB_DOMAIN", ""),
+    allowedHeaders: ["Content-Type", ...supertokens.getAllCORSHeaders()],
+    credentials: true,
+  })
+);
+app.use(middleware());
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -68,7 +59,9 @@ app.use("/tag", rateLimitMiddleware, tagsRouter);
 // for cms
 app.use("/admin", cmsRateLimitMiddleware, adminRouter);
 
-app.use(errorHandler);
+// error handler for supertoken
+app.use(errorHandler());
+app.use(customErrorHandler);
 
 app.listen(port, () => {
   writeInfoLog(`Start Server at port ${port}`);

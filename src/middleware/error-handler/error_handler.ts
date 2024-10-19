@@ -23,7 +23,7 @@ const getErrorMsg = (
   };
 };
 
-const errorHandler = (
+const customErrorHandler = (
   err: any,
   req: Request,
   res: Response,
@@ -42,4 +42,4 @@ const errorHandler = (
   });
 };
 
-export { getErrorMsg, errorHandler };
+export { getErrorMsg, customErrorHandler };
