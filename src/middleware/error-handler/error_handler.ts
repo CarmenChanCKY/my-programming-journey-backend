@@ -34,7 +34,7 @@ const customErrorHandler = (
   const description: string = err.description || codeList["500"].description;
   const stack: any = err.stack || {};
 
-  res.status(code).send({
+  return res.status(code).send({
     status: code,
     name: errorName,
     description,

@@ -95,7 +95,7 @@ searchRouter.get(
           data[i].content = removeHTMLTags(data[i].content);
         }
 
-        res.send({ data, total: total[0].post_total });
+        return res.send({ data, total: total[0].post_total });
       } else {
         return res.send([]);
       }

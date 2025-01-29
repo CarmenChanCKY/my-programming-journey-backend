@@ -2,6 +2,8 @@ import mysql2 from "mysql2/promise";
 import { getEnvironmentVar } from "config/env/env";
 import { writeConsoleLog, writeErrorLog } from "@/modules/logger";
 
+// connect mysql database
+
 let dbPool: mysql2.Pool = mysql2.createPool({
   host: getEnvironmentVar("DB_HOST", "localhost"),
   port: parseInt(getEnvironmentVar("DB_PORT", 3306), 10),

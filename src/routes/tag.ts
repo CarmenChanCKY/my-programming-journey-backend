@@ -24,7 +24,7 @@ tagsRouter.get(
       const data = JSON.parse(JSON.stringify(result));
 
       if (Array.isArray(data) && data.length > 0) {
-        res.send({ data });
+        return res.send({ data });
       } else {
         return res.send([]);
       }
@@ -181,7 +181,7 @@ tagsRouter.get(
       if (searchFail) {
         return res.send([]);
       } else {
-        res.send({ data: resultData, total });
+        return res.send({ data: resultData, total });
       }
     } catch (error) {
       writeConsoleLog("error", `Tag /list error.\n${error}`);

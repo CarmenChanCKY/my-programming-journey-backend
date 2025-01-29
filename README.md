@@ -27,6 +27,8 @@ docker-compose down
 ## Environment Variable
 This project use environment variable file to store the sensitive information. This file is located in ```/config/env```. Please create ```.env.development``` and ```.env.production``` files for development and production environment. [.env.example](/config/env/env.ts) contains the structure for environment variables.
 
+For supertoken variable, please read [supertoken](https://supertokens.com/docs/references/app-info) official website
+
 | Variable            | Example   | Description                                              |
 |---------------------|-----------|----------------------------------------------------------|
 | PORT                | 3000      | Port for Express server                                  |
@@ -36,10 +38,13 @@ This project use environment variable file to store the sensitive information. T
 | DB_PASSWORD         | xxxxxx    | The password of your MYSQL Database                      |
 | DB_DATABASE         | test_db   | The name of your database                                |
 | MYSQL_ROOT_PASSWORD | xxxxxx    | Root password for MYSQL Database                         |
-| HASH_ITERATION      | 100       | The number of iteration for PBKDF2                       |
-| HASH_KEYLEN         | 32        | The key length (in bytes) for PBKDF2                     |
-| HASH_DIGEST         | sha512    | The digest used for PBKDF2                               |
-| JWT_SECRET          | xxxxxx    | The 32 bytes secret key used to signing a JSON Web Token |
+| AUTH_API_DOMAIN     | http://localhost:9000   | domain for backend                         |
+| AUTH_WEB_DOMAIN     | http://localhost:9000    | domain for website that using supertoken login function           |
+| API_BASE_PATH       | /token    | See [website](https://supertokens.com/docs/references/app-info#apibasepath-optional) for more details |
+| CORE_CONNECTION_URL | xxxxxx    | See [website](https://supertokens.com/docs/quickstart/next-steps#configure-the-core-service) for more details |
+| CORE_API_KEY        | xxxxxx    | See [website](https://supertokens.com/docs/quickstart/next-steps#configure-the-core-service) for more details  |
+| ADMIN_EMAIL         | xx@gmail.com   | Restrict the access to supertoken dashboard. See [website](https://supertokens.com/docs/post-authentication/dashboard/setup#restricting-access-to-dashboard-users)  for more details |
+
 
 
 ## Docker

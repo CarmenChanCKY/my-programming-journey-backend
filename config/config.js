@@ -1,3 +1,5 @@
+// config for sequelize
+
 module.exports = {
   development: {
     username: process.env.DB_USERNAME,

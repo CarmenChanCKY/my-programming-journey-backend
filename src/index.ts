@@ -13,12 +13,13 @@ import {
 } from "@/middleware/rate-limiter/rate_limiter";
 import { middleware, errorHandler } from "supertokens-node/framework/express";
 import { initTokens } from "@/middleware/security-tokens/security_tokens";
+import { verifySession } from "supertokens-node/recipe/session/framework/express";
 
-import adminRouter from "@/routes/admin";
 import postRouter from "@/routes/post";
 import searchRouter from "@/routes/search";
 import categoriesRouter from "@/routes/categories";
 import tagsRouter from "@/routes/tag";
+import cmsTgsRouter from "@/routes/cms/tags";
 
 const app: Express = express();
 const port = getEnvironmentVar("PORT", 3000);
@@ -31,13 +32,19 @@ app.use(
   helmet({
     contentSecurityPolicy: {
       directives: {
-        "script-src": ["'self'", "https://cdn.jsdelivr.net", "'unsafe-inline'","'unsafe-eval'"],
+        "script-src": [
+          "'self'",
+          "https://cdn.jsdelivr.net",
+          "'unsafe-inline'",
+          "'unsafe-eval'",
+        ],
         "img-src": ["'self'", "https://cdn.jsdelivr.net"],
       },
     },
   })
 );
 
+// config for supertoken
 const supertokens = initTokens();
 app.use(
   cors({
@@ -57,7 +64,7 @@ app.use("/categories", rateLimitMiddleware, categoriesRouter);
 app.use("/tag", rateLimitMiddleware, tagsRouter);
 
 // for cms
-app.use("/admin", cmsRateLimitMiddleware, adminRouter);
+app.use("/cms/tags", cmsRateLimitMiddleware, verifySession(), cmsTgsRouter);
 
 // error handler for supertoken
 app.use(errorHandler());

@@ -53,9 +53,9 @@ categoriesRouter.get(
           });
         }
 
-        res.send({ postList: resultData, categoryList: groupData });
+        return res.send({ postList: resultData, categoryList: groupData });
       } else {
-        res.send([]);
+        return res.send([]);
       }
     } catch (error) {
       writeConsoleLog("error", `Category /all error.\n${error}`);
@@ -143,7 +143,7 @@ categoriesRouter.get(
           data[i].content = removeHTMLTags(data[i].content);
         }
 
-        res.send({ data, total: total[0].post_total });
+        return res.send({ data, total: total[0].post_total });
       } else {
         return res.send([]);
       }

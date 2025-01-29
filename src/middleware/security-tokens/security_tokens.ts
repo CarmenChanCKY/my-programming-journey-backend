@@ -6,6 +6,7 @@ import { getEnvironmentVar } from "config/env/env";
 
 const initTokens = () => {
   supertokens.init({
+    // debug: true,
     framework: "express",
     supertokens: {
       connectionURI: getEnvironmentVar("CORE_CONNECTION_URL", ""),
@@ -16,13 +17,24 @@ const initTokens = () => {
       appName: "My Programming Journey",
       apiDomain: getEnvironmentVar("AUTH_API_DOMAIN", ""),
       websiteDomain: getEnvironmentVar("AUTH_WEB_DOMAIN", ""),
-      apiBasePath: "/token-admin",
+      apiBasePath: getEnvironmentVar("API_BASE_PATH", ""),
       websiteBasePath: "/",
     },
     recipeList: [
-      EmailPassword.init(), // initializes signin / sign up features
-      Session.init(), // initializes session features
-      Dashboard.init(), // initialize dashboard
+      EmailPassword.init({
+        override: {
+          apis: (originalImplementation) => {
+            return {
+              ...originalImplementation,
+              signUpPOST: undefined,
+            };
+          },
+        },
+      }), // initializes signin / sign up features
+      Session.init({
+        getTokenTransferMethod: () => "header",
+      }), // initializes session features
+      Dashboard.init({ admins: [getEnvironmentVar("ADMIN_EMAIL", "")] }), // initialize dashboard
     ],
   });
 
