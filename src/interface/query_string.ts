@@ -8,8 +8,11 @@ import {
   ValidateIf,
 } from "class-validator";
 
-//https://github.com/typestack/class-validator#validation-groups
+// https://github.com/typestack/class-validator#validation-groups
 export default class QueryStringData {
+  // validator for pages
+
+  // validate if group = normalPage
   @IsNotEmpty({
     groups: ["normalPage"],
   })
@@ -19,6 +22,8 @@ export default class QueryStringData {
   @Min(1, {
     groups: ["normalPage"],
   })
+  // if the condition is true, then the following validation will be executed
+  // for firstPage group only
   @ValidateIf((o) => {
     return Object.keys(o).indexOf("pages") !== -1;
   })
@@ -30,6 +35,8 @@ export default class QueryStringData {
   })
   pages!: number;
 
+  // validator for id
+  // if the condition is true, then the following validation will be executed
   @ValidateIf((o) => {
     return Object.keys(o).indexOf("id") !== -1;
   })
@@ -38,6 +45,8 @@ export default class QueryStringData {
   @Min(1)
   id!: number;
 
+  // validator for slug
+  // if the condition is true, then the following validation will be executed
   @ValidateIf((o) => {
     return Object.keys(o).indexOf("slug") !== -1;
   })

@@ -27,7 +27,7 @@ const validateQueryString = async (
     result = true;
   } catch (error) {
     writeErrorLog(`Validate query string fail.\n${error}`);
-    writeConsoleLog("error", `Validate admin regex fail.\n${error}`);
+    writeConsoleLog("error", `Validate query string fail.\n${error}`);
   }
 
   return result;

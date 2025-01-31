@@ -5,11 +5,11 @@ import { validateQueryString } from "@/middleware/validator/query_validate";
 import { writeConsoleLog } from "@/modules/logger";
 
 import { SessionRequest } from "supertokens-node/framework/express";
+import { validateTagFormData } from "@/middleware/validator/tags_validator";
 const cmsTagsRouter = express.Router();
 
 cmsTagsRouter.get(
   "/list",
- // verifySession(),
   async (req: SessionRequest, res: Response, next: NextFunction) => {
     let pages: any = req.query.pages;
 
@@ -69,6 +69,38 @@ cmsTagsRouter.get(
       }
     } catch (error) {
       writeConsoleLog("error", `CMS Tag /all error.\n${error}`);
+      next(getErrorMsg("500", "", error));
+      return;
+    }
+  }
+);
+
+cmsTagsRouter.post(
+  "/add",
+  async (req: SessionRequest, res: Response, next: NextFunction) => {
+    const data = req.body;
+    console.log(data)
+
+    let validateData = await validateTagFormData(data, "addTag");
+
+    if (!validateData) {
+      next(getErrorMsg("422", "invalid input"));
+      return;
+    }
+    try {
+      const addQuery = `INSERT INTO tags (name, data_status) values (?, ?);`;
+      const [result] = await dbPool.execute(addQuery, [data.name, "active"]);
+      const resultData = JSON.parse(JSON.stringify(result));
+
+      console.log(resultData);
+
+      if (typeof resultData === "object") {
+        return res.send({ data: "insert success" });
+      } else {
+        return res.send({ data: "insert fail" });
+      }
+    } catch (error) {
+      writeConsoleLog("error", `CMS Tag /add error.\n${error}`);
       next(getErrorMsg("500", "", error));
       return;
     }
