@@ -53,4 +53,22 @@ export default class QueryStringData {
   @IsNotEmpty()
   @IsString()
   slug!: string;
+
+  // validate for keyword
+  // if the condition is true, then the following validation will be executed
+  @ValidateIf((o) => {
+    return Object.keys(o).indexOf("keyword") !== -1;
+  })
+  @IsNotEmpty()
+  @IsString()
+  keyword!: string;
+
+  // validate for filter
+  // if the condition is true, then the following validation will be executed
+  @ValidateIf((o) => {
+    return Object.keys(o).indexOf("filter") !== -1;
+  })
+  @IsNotEmpty()
+  @IsString()
+  filter!: string;
 }
