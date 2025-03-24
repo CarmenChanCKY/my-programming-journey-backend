@@ -112,7 +112,7 @@ cmsTagsRouter.get(
 
 // add new tag
 cmsTagsRouter.post(
-  "/",
+  "/add",
   async (req: SessionRequest, res: Response, next: NextFunction) => {
     const data = req.body;
 
@@ -148,9 +148,9 @@ cmsTagsRouter.post(
           next(getErrorMsg("500", "insert fail"));
           writeConsoleLog(
             "error",
-            `CMS Tag POST / insert error.\n${JSON.stringify(resultData)}`
+            `CMS Tag POST /add error.\n${JSON.stringify(resultData)}`
           );
-          cmsWriteErrorLog("CMS Tag POST / insert error");
+          cmsWriteErrorLog("CMS Tag POST /add error");
           cmsWriteErrorLog(resultData);
           return;
         }
@@ -164,16 +164,100 @@ cmsTagsRouter.post(
 );
 
 // update tag
-cmsTagsRouter.put(
-  "/",
-  async (req: SessionRequest, res: Response, next: NextFunction) => {}
+// TODO: need to test
+cmsTagsRouter.post(
+  "/update",
+  async (req: SessionRequest, res: Response, next: NextFunction) => {
+    const data = req.body;
+
+    // validate tag name and id is not empty
+    let validateData = await validateTagFormData(data, "updateTag");
+
+    if (!validateData) {
+      next(getErrorMsg("422", "invalid input"));
+      return;
+    }
+
+    const name = data.name.trim();
+    const id = parseInt(data.id, 10);
+    try {
+      // check whether the tag name is already exist
+      const checkQuery = `SELECT id FROM tags WHERE LOWER(name) = ? AND data_status='active' and id <> ?;`;
+      const [checkResult] = await dbPool.execute(checkQuery, [
+        name.toLowerCase(),
+        id
+      ]);
+      const checkData = JSON.parse(JSON.stringify(checkResult));
+
+      if (Array.isArray(checkData) && checkData.length > 0) {
+        // tag exists
+        next(getErrorMsg("409", "tag exists"));
+        return;
+      } else {
+        const updateQuery = `UPDATE tags set name = ? WHERE id = ? and data_status='active';`;
+        const [result] = await dbPool.execute(updateQuery, [name, id]);
+        const resultData = JSON.parse(JSON.stringify(result));
+
+        if (typeof resultData === "object") {
+          return res.send({ data: "update success" });
+        } else {
+          next(getErrorMsg("500", "update fail"));
+          writeConsoleLog(
+            "error",
+            `CMS Tag POST /update error.\n${JSON.stringify(resultData)}`
+          );
+          cmsWriteErrorLog("CMS Tag POST /update error");
+          cmsWriteErrorLog(resultData);
+          return;
+        }
+      }
+    } catch (error) {
+      writeConsoleLog("error", `CMS Tag /update error.\n${error}`);
+      next(getErrorMsg("500", "", error));
+      return;
+    }
+  }
 );
 
 // delete tag
+// TODO: need to test
 cmsTagsRouter.delete(
   "/:id",
   async (req: SessionRequest, res: Response, next: NextFunction) => {
-    // req.params.id
+    const id = parseInt(req.params.id);
+
+    // validate tag id is valid
+    let validateData = await validateTagFormData({ id: id }, "removeTag");
+
+    if (!validateData) {
+      next(getErrorMsg("422", "invalid input"));
+      return;
+    }
+
+
+    try {
+      // check tag id exists
+      const checkQuery = `SELECT * FROM tags WHERE id = ? AND data_status='active';`;
+      const [checkResult] = await dbPool.execute(checkQuery, [
+        id,
+      ]);
+      const checkData = JSON.parse(JSON.stringify(checkResult));
+
+      if (Array.isArray(checkData) && checkData.length > 0) {
+        // tag exists
+        next(getErrorMsg("409", "tag not found"));
+        return;
+      } else {
+        // soft delete the category
+        // TODO:
+        const removeQuery = ``
+      }
+
+    } catch (error) {
+      writeConsoleLog("error", `CMS Tag /delete error.\n${error}`);
+      next(getErrorMsg("500", "", error));
+      return;
+    }
   }
 );
 

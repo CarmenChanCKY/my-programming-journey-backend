@@ -10,7 +10,7 @@ import {
 export default class TagsData {
   // validator for tags
 
-  // validate if group = addTag
+  // validate if group = addTag / group = updateTag
   @IsString()
   @IsDefined({
     groups: ["addTag", "updateTag"],
@@ -21,18 +21,18 @@ export default class TagsData {
   name!: string;
 
   // validator for id
-  // for updateTag group only
+  // for updateTag group and removeTag group only
   @IsDefined({
-    groups: ["updateTag"],
+    groups: ["updateTag", "removeTag"],
   })
   @IsNotEmpty({
-    groups: ["updateTag"],
+    groups: ["updateTag", "removeTag"],
   })
   @IsInt({
-    groups: ["updateTag"],
+    groups: ["updateTag", "removeTag"],
   })
   @Min(1, {
-    groups: ["updateTag"],
+    groups: ["updateTag", "removeTag"],
   })
   id!: number;
 }
