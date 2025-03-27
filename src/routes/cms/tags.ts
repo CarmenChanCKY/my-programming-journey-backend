@@ -112,7 +112,7 @@ cmsTagsRouter.get(
 
 // add new tag
 cmsTagsRouter.post(
-  "/",
+  "/add",
   async (req: SessionRequest, res: Response, next: NextFunction) => {
     const data = req.body;
 
@@ -148,9 +148,9 @@ cmsTagsRouter.post(
           next(getErrorMsg("500", "insert fail"));
           writeConsoleLog(
             "error",
-            `CMS Tag POST / insert error.\n${JSON.stringify(resultData)}`
+            `CMS Tag POST /add error.\n${JSON.stringify(resultData)}`
           );
-          cmsWriteErrorLog("CMS Tag POST / insert error");
+          cmsWriteErrorLog("CMS Tag POST /add error");
           cmsWriteErrorLog(resultData);
           return;
         }
@@ -164,9 +164,45 @@ cmsTagsRouter.post(
 );
 
 // update tag
-cmsTagsRouter.put(
-  "/",
-  async (req: SessionRequest, res: Response, next: NextFunction) => {}
+cmsTagsRouter.post(
+  "/update",
+  async (req: SessionRequest, res: Response, next: NextFunction) => {
+    const data = req.body;
+
+    // validate tag name is not empty and id is provided
+    let validateData = await validateTagFormData(data, "updateTag");
+
+    if (!validateData) {
+      next(getErrorMsg("422", "invalid input"));
+      return;
+    }
+
+    const name = data.name.trim();
+    const id = parseInt(data.id);
+
+    try {
+      const editQuery = `UPDATE tags set name = ? WHERE id = ?;`;
+      const [result] = await dbPool.execute(editQuery, [name, id]);
+      const resultData = JSON.parse(JSON.stringify(result));
+
+      if (typeof resultData === "object") {
+        return res.send({ data: "update success" });
+      } else {
+        next(getErrorMsg("500", "update fail"));
+        writeConsoleLog(
+          "error",
+          `CMS Tag POST /update error.\n${JSON.stringify(resultData)}`
+        );
+        cmsWriteErrorLog("CMS Tag POST /update error");
+        cmsWriteErrorLog(resultData);
+        return;
+      }
+    } catch (error) {
+      writeConsoleLog("error", `CMS Tag /update error.\n${error}`);
+      next(getErrorMsg("500", "", error));
+      return;
+    }
+  }
 );
 
 // delete tag
