@@ -13,7 +13,11 @@ cmsTagsRouter.get(
   "/",
   async (req: SessionRequest, res: Response, next: NextFunction) => {
     let pages: any = req.query.pages;
-    let filter: any = req.query.filter?.toString().trim();
+    let filter: any = req.query.filterUsedCount
+      ?.toString()
+      .toLowerCase()
+      .trim();
+    let keyword: any = req.query.filterName?.toString().toLowerCase().trim();
 
     // validate filter if exists
     let validateFilter = false;
@@ -21,15 +25,24 @@ cmsTagsRouter.get(
     if (filter !== undefined && filter != null && filter !== "") {
       filterExists = true;
       validateFilter = await validateQueryString({ filter });
-
       if (validateFilter) {
         // accept the following filter only
-        if (["larger", "smaller"].includes(filter)) {
+        if (!["used", "unused"].includes(filter)) {
           validateFilter = false;
         }
       }
     } else {
       validateFilter = true;
+    }
+
+    // validate keyword if exists
+    let validateKeyword = false;
+    let keywordExists = false;
+    if (keyword !== undefined && keyword != null && keyword !== "") {
+      keywordExists = true;
+      validateKeyword = await validateQueryString({ keyword });
+    } else {
+      validateKeyword = true;
     }
 
     let validatePage = false;
@@ -57,39 +70,62 @@ cmsTagsRouter.get(
       return;
     }
 
+    if (!validateKeyword) {
+      next(getErrorMsg("404", "invalid keyword"));
+      return;
+    }
+
     const limit: number = 10;
     pages = (parseInt(pages.toString()) - 1) * limit;
 
     try {
       let filterQuery = "";
+      let filterTotalQuery = "";
+      const params = [];
+
       if (filterExists) {
         switch (filter) {
-          case "larger":
-            filterQuery = " AND COUNT(post_tags.post_id) > 0 ";
+          case "used":
+            filterQuery = " HAVING COUNT(post_tags.post_id) > 0 ";
+            filterTotalQuery = " AND tags.id IN ";
             break;
-          case "smaller":
-            filterQuery = " AND COUNT(post_tags.post_id) <= 0 ";
+          case "unused":
+            filterQuery = " HAVING COUNT(post_tags.post_id) <= 0 ";
+            filterTotalQuery = " AND tags.id NOT IN ";
             break;
         }
+
+        filterTotalQuery = `${filterTotalQuery} (SELECT post_tags.tags_id
+          FROM post_tags WHERE post_tags.data_status = 'active') `;
       }
+
+      let keywordQuery = "";
+      if (keywordExists) {
+        // query for search tag name
+        keywordQuery = ` AND LOWER(TRIM(tags.name)) LIKE ? `;
+        params.push(`%${keyword}%`);
+      }
+
       const query = `SELECT tags.id, tags.name, COUNT(post_tags.post_id) AS post_count
                     FROM tags AS tags
                       LEFT JOIN post_tags AS post_tags ON tags.id = post_tags.tags_id
                         AND post_tags.data_status = 'active'
-                    WHERE tags.data_status = 'active' ${filterQuery}
+                    WHERE tags.data_status = 'active'
+                     ${keywordQuery}
                     GROUP BY tags.id
+                    ${filterQuery}
                     ORDER BY tags.id DESC
                     LIMIT ${limit} OFFSET ${pages};`;
 
-      const [result] = await dbPool.execute(query);
+      const [result] = await dbPool.execute(query, params);
       const data = JSON.parse(JSON.stringify(result));
 
       // calculate total
       const totalQuery = `SELECT COUNT(tags.id) AS tags_total
       FROM tags AS tags
-      WHERE tags.data_status = 'active' ${filterQuery};`;
+      WHERE tags.data_status = 'active' ${keywordQuery} ${filterTotalQuery} ;`;
 
-      const [totalResult] = await dbPool.execute(totalQuery);
+      const [totalResult] = await dbPool.execute(totalQuery, params);
       const tagsTotal = JSON.parse(JSON.stringify(totalResult));
 
       if (
@@ -164,7 +200,6 @@ cmsTagsRouter.post(
 );
 
 // update tag
-// TODO: need to test
 cmsTagsRouter.post(
   "/update",
   async (req: SessionRequest, res: Response, next: NextFunction) => {
@@ -185,13 +220,13 @@ cmsTagsRouter.post(
       const checkQuery = `SELECT id FROM tags WHERE LOWER(name) = ? AND data_status='active' and id <> ?;`;
       const [checkResult] = await dbPool.execute(checkQuery, [
         name.toLowerCase(),
-        id
+        id,
       ]);
       const checkData = JSON.parse(JSON.stringify(checkResult));
 
       if (Array.isArray(checkData) && checkData.length > 0) {
         // tag exists
-        next(getErrorMsg("409", "tag exists"));
+        next(getErrorMsg("409", "tag name exists"));
         return;
       } else {
         const updateQuery = `UPDATE tags set name = ? WHERE id = ? and data_status='active';`;
@@ -234,13 +269,10 @@ cmsTagsRouter.delete(
       return;
     }
 
-
     try {
       // check tag id exists
       const checkQuery = `SELECT * FROM tags WHERE id = ? AND data_status='active';`;
-      const [checkResult] = await dbPool.execute(checkQuery, [
-        id,
-      ]);
+      const [checkResult] = await dbPool.execute(checkQuery, [id]);
       const checkData = JSON.parse(JSON.stringify(checkResult));
 
       if (Array.isArray(checkData) && checkData.length > 0) {
@@ -250,9 +282,8 @@ cmsTagsRouter.delete(
       } else {
         // soft delete the category
         // TODO:
-        const removeQuery = ``
+        const removeQuery = ``;
       }
-
     } catch (error) {
       writeConsoleLog("error", `CMS Tag /delete error.\n${error}`);
       next(getErrorMsg("500", "", error));
