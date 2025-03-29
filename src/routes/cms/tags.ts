@@ -256,18 +256,20 @@ cmsTagsRouter.post(
 
 // delete tag
 // TODO: need to test
-cmsTagsRouter.delete(
-  "/:id",
+cmsTagsRouter.post(
+  "/delete",
   async (req: SessionRequest, res: Response, next: NextFunction) => {
-    const id = parseInt(req.params.id);
+    const data = req.body;
 
     // validate tag id is valid
-    let validateData = await validateTagFormData({ id: id }, "removeTag");
+    let validateData = await validateTagFormData(data, "removeTag");
 
     if (!validateData) {
       next(getErrorMsg("422", "invalid input"));
       return;
     }
+
+    const id = parseInt(data.id);
 
     try {
       // check tag id exists
@@ -277,12 +279,37 @@ cmsTagsRouter.delete(
 
       if (Array.isArray(checkData) && checkData.length > 0) {
         // tag exists
+        // check whether the tag has been used
+        const searchQuery = `SELECT id FROM post_tags WHERE tags_id = ? AND data_status = 'active';`;
+        const [searchResult] = await dbPool.execute(searchQuery, [id]);
+        const searchData = JSON.parse(JSON.stringify(searchResult));
+
+        if (Array.isArray(searchData) && searchData.length > 0) {
+          // tag has been used
+          next(getErrorMsg("409", "tag has been used"));
+          return;
+        } else {
+          // soft delete the tag
+          const removeQuery = `UPDATE tags set data_status='inactive' WHERE id = ? and data_status='active';`;
+          const [result] = await dbPool.execute(removeQuery, [id]);
+          const resultData = JSON.parse(JSON.stringify(result));
+
+          if (typeof resultData === "object") {
+            return res.send({ data: "remove success" });
+          } else {
+            next(getErrorMsg("500", "remove fail"));
+            writeConsoleLog(
+              "error",
+              `CMS Tag POST /:id delete error.\n${JSON.stringify(resultData)}`
+            );
+            cmsWriteErrorLog("CMS Tag POST /:id delete error");
+            cmsWriteErrorLog(resultData);
+            return;
+          }
+        }
+      } else {
         next(getErrorMsg("409", "tag not found"));
         return;
-      } else {
-        // soft delete the category
-        // TODO:
-        const removeQuery = ``;
       }
     } catch (error) {
       writeConsoleLog("error", `CMS Tag /delete error.\n${error}`);
