@@ -1,11 +1,4 @@
-import {
-  IsNotEmpty,
-  IsInt,
-  Min,
-  IsString,
-  IsDefined,
-  ValidateIf,
-} from "class-validator";
+import { IsNotEmpty, IsInt, Min, IsString, IsDefined } from "class-validator";
 
 export default class TagsData {
   // validator for tags

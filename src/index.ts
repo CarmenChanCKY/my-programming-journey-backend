@@ -19,7 +19,8 @@ import postRouter from "@/routes/post";
 import searchRouter from "@/routes/search";
 import categoriesRouter from "@/routes/categories";
 import tagsRouter from "@/routes/tag";
-import cmsTgsRouter from "@/routes/cms/tags";
+import cmsTagsRouter from "@/routes/cms/tags";
+import cmsCategoriesRouter from "@/routes/cms/categories";
 
 const app: Express = express();
 const port = getEnvironmentVar("PORT", 3000);
@@ -64,7 +65,13 @@ app.use("/categories", rateLimitMiddleware, categoriesRouter);
 app.use("/tag", rateLimitMiddleware, tagsRouter);
 
 // for cms
-app.use("/cms/tags", cmsRateLimitMiddleware, verifySession(), cmsTgsRouter);
+app.use("/cms/tags", cmsRateLimitMiddleware, verifySession(), cmsTagsRouter);
+app.use(
+  "/cms/categories",
+  cmsRateLimitMiddleware,
+  verifySession(),
+  cmsCategoriesRouter
+);
 
 // error handler for supertoken
 app.use(errorHandler());
