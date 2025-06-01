@@ -40,10 +40,10 @@ tagsRouter.get(
   "/list",
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      let tag: any = req.query.tag;
+      let tag: any = req.query.tag?.toString().trim();
       let pages: any = req.query.pages;
 
-      let validateTag = await validateQueryString({ slug: tag });
+      let validateTag = await validateQueryString({ keyword: tag });
 
       let validatePage = false;
       if (pages !== undefined && pages !== null && pages !== "") {
@@ -70,8 +70,6 @@ tagsRouter.get(
 
       const limit: number = 10;
       pages = (parseInt(pages.toString()) - 1) * limit;
-
-      tag = tag.toString().trim();
 
       const resultData: Array<any> = [];
       let total: number = 0;

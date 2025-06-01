@@ -21,6 +21,7 @@ import categoriesRouter from "@/routes/categories";
 import tagsRouter from "@/routes/tag";
 import cmsTagsRouter from "@/routes/cms/tags";
 import cmsCategoriesRouter from "@/routes/cms/categories";
+import cmsPostRouter from "@/routes/cms/post";
 
 const app: Express = express();
 const port = getEnvironmentVar("PORT", 3000);
@@ -71,6 +72,13 @@ app.use(
   cmsRateLimitMiddleware,
   verifySession(),
   cmsCategoriesRouter
+);
+
+app.use(
+  "/cms/post",
+  cmsRateLimitMiddleware,
+  /* verifySession(), */
+  cmsPostRouter
 );
 
 // error handler for supertoken

@@ -91,7 +91,7 @@ postRouter.get(
   "/detail",
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      let postSlug: any = req.query.slug;
+      let postSlug: any = req.query.slug?.toString().trim();
 
       let validateEmpty = await validateQueryString({ slug: postSlug });
       if (!validateEmpty) {

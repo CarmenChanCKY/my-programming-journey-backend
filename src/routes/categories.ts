@@ -69,10 +69,10 @@ categoriesRouter.get(
   "/list",
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      let category: any = req.query.category;
+      let category: any = req.query.category?.toString().trim();
       let pages: any = req.query.pages;
 
-      let validateCategory = await validateQueryString({ slug: category });
+      let validateCategory = await validateQueryString({ keyword: category });
 
       let validatePage = false;
 
@@ -104,8 +104,6 @@ categoriesRouter.get(
 
       const limit: number = 10;
       pages = (parseInt(pages.toString()) - 1) * limit;
-
-      category = category.toString().trim();
 
       const query = `SELECT post.title, post.date, post.content, post.slug, post.category_id,
                       category.name AS category_name, tag.tags_data

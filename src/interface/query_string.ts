@@ -6,6 +6,9 @@ import {
   IsDefined,
   Equals,
   ValidateIf,
+  IsArray,
+  ArrayNotEmpty,
+  ArrayMinSize,
 } from "class-validator";
 
 // https://github.com/typestack/class-validator#validation-groups
@@ -71,4 +74,16 @@ export default class QueryStringData {
   @IsNotEmpty()
   @IsString()
   filter!: string;
+
+  // validate for array of int
+  // if the condition is true, then the following validation will be executed
+  @ValidateIf((o) => {
+    return Object.keys(o).indexOf("intArr") !== -1;
+  })
+  @IsArray({ each: true })
+  @ArrayNotEmpty()
+  @IsInt({ each: true })
+  @Min(1, { each: true })
+  @ArrayMinSize(1)
+  intArr!: Array<number>;
 }

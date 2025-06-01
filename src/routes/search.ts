@@ -11,10 +11,10 @@ searchRouter.get(
   "/post",
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      let keyword: any = req.query.keyword;
+      let keyword: any = req.query.keyword?.toString().trim();
       let pages: any = req.query.pages;
 
-      let validateKeyword = await validateQueryString({ slug: keyword });
+      let validateKeyword = await validateQueryString({ keyword });
 
       let validatePage = false;
 
@@ -39,8 +39,6 @@ searchRouter.get(
 
       const limit: number = 10;
       pages = (parseInt(pages.toString()) - 1) * limit;
-
-      keyword = keyword.toString().trim();
 
       const startStr = dbPool.escape("\\b" + keyword);
       const middleStr = dbPool.escape("\\b" + keyword + "\\b");
@@ -77,10 +75,7 @@ searchRouter.get(
                         WHERE post.data_status = 'active'
                         AND (${titleQuery} OR ${contentQuery})`;
 
-      const [totalResult] = await dbPool.execute(totalQuery, [
-        keyword,
-        keyword,
-      ]);
+      const [totalResult] = await dbPool.execute(totalQuery);
 
       const data = JSON.parse(JSON.stringify(result));
       const total = JSON.parse(JSON.stringify(totalResult));
