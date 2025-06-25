@@ -146,6 +146,38 @@ cmsTagsRouter.get(
   }
 );
 
+// get used tags name and id
+cmsTagsRouter.get(
+  "/filter-tags-list",
+  async (req: SessionRequest, res: Response, next: NextFunction) => {
+    try {
+      let filterQuery = " HAVING COUNT(post_tags.post_id) > 0 ";
+
+      const query = `SELECT tags.id, tags.name
+                    FROM tags AS tags
+                      LEFT JOIN post_tags AS post_tags ON tags.id = post_tags.tags_id
+                        AND post_tags.data_status = 'active'
+                    WHERE tags.data_status = 'active'
+                    GROUP BY tags.id
+                    ${filterQuery}
+                    ORDER BY tags.name ASC;`;
+
+      const [result] = await dbPool.execute(query, []);
+      const data = JSON.parse(JSON.stringify(result));
+
+      if (Array.isArray(data) && data.length > 0) {
+        return res.send({ data });
+      } else {
+        return res.send([]);
+      }
+    } catch (error) {
+      writeConsoleLog("error", `CMS Tag GET /filter-tags-list error.\n${error}`);
+      next(getErrorMsg("500", "", error));
+      return;
+    }
+  }
+);
+
 // add new tag
 cmsTagsRouter.post(
   "/add",
