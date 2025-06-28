@@ -57,6 +57,9 @@ cmsPostRouter.get(
     let validateTagsIDArr = false;
     let tagsIDArrExists = false;
     if (tagsIDArr !== undefined && tagsIDArr != null && tagsIDArr !== "") {
+      tagsIDArr = tagsIDArr.map((item: string) => {
+        return parseInt(item);
+      });
       validateTagsIDArr = await validateQueryString({ intArr: tagsIDArr });
       tagsIDArrExists = true;
     } else {
@@ -124,7 +127,7 @@ cmsPostRouter.get(
       if (tagsIDArrExists) {
         let filterValueCount = Array(tagsIDArr.length).fill("?");
 
-        valuesArr = [...valuesArr, ...tagsIDArr];
+        valuesArr = [...tagsIDArr, ...valuesArr];
         tagsFilterQuery += ` AND post_tags.tags_id IN (${filterValueCount.join(
           ","
         )})`;

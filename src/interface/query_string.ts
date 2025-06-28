@@ -80,7 +80,7 @@ export default class QueryStringData {
   @ValidateIf((o) => {
     return Object.keys(o).indexOf("intArr") !== -1;
   })
-  @IsArray({ each: true })
+  @IsArray({})
   @ArrayNotEmpty()
   @IsInt({ each: true })
   @Min(1, { each: true })
