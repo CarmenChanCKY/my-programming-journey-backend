@@ -268,7 +268,7 @@ cmsCategoriesRouter.post(
         const [result] = await dbPool.execute(updateQuery, [name, id]);
         const resultData = JSON.parse(JSON.stringify(result));
 
-        if (typeof resultData === "object") {
+        if (typeof resultData === "object" && resultData.affectedRows >= 1) {
           return res.send({ data: "update success" });
         } else {
           next(getErrorMsg("500", "update fail"));
@@ -328,7 +328,7 @@ cmsCategoriesRouter.post(
           const [result] = await dbPool.execute(removeQuery, [id]);
           const resultData = JSON.parse(JSON.stringify(result));
 
-          if (typeof resultData === "object") {
+          if (typeof resultData === "object" && resultData.affectedRows >= 1) {
             return res.send({ data: "remove success" });
           } else {
             next(getErrorMsg("500", "remove fail"));

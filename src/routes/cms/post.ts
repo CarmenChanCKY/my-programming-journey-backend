@@ -24,7 +24,7 @@ cmsPostRouter.get(
     }
 
     // it will return an array
-    // for example, if query is tagsID=1&tagsID=3&tagsID=6, tagsIDArr = ['1','3','6']
+    // for example, if query is tagsID[]=1&tagsID[]=3&tagsID[]=6, tagsIDArr = ['1','3','6']
     let tagsIDArr: any = req.query.tagsID;
 
     // validate post title if exists
@@ -147,13 +147,13 @@ cmsPostRouter.get(
 
       const [result] = await dbPool.execute(query, valuesArr);
 
-      const totalQuery = `SELECT COUNT(post.id) AS post_total
+      const totalQuery = `SELECT COUNT(DISTINCT post.id) AS post_total
       FROM post
       JOIN (SELECT post_tags.post_id, tags.name
           FROM post_tags JOIN tags
               ON tags.id = post_tags.tags_id AND tags.data_status = 'active'
           WHERE post_tags.data_status = 'active' ${tagsFilterQuery}) AS tag ON tag.post_id = post.id
-      WHERE post.data_status = 'active'  ${filterQuery}`;
+      WHERE post.data_status = 'active' ${filterQuery}`;
 
       const [totalResult] = await dbPool.execute(totalQuery, valuesArr);
       const data = JSON.parse(JSON.stringify(result));
@@ -173,6 +173,95 @@ cmsPostRouter.get(
       writeConsoleLog("error", `CMS Post GET / error.\n${error}`);
       next(getErrorMsg("500", "", error));
       return;
+    }
+  }
+);
+
+// delete post
+// TODO: need to test
+cmsPostRouter.post(
+  "/delete",
+  async (req: SessionRequest, res: Response, next: NextFunction) => {
+    let id = req.body.id;
+
+    // validate post id is valid
+    let validateData = await validateQueryString({ id: id });
+
+    if (!validateData) {
+      next(getErrorMsg("422", "invalid input"));
+      return;
+    }
+
+    id = parseInt(id);
+    const conn = await dbPool.getConnection();
+    try {
+      await conn.beginTransaction();
+
+      // check post id exists
+      const checkQuery = `SELECT id FROM post WHERE id = ? AND data_status = 'inactive';`;
+      const [checkResult] = await conn.execute(checkQuery, [id]);
+      const checkData = JSON.parse(JSON.stringify(checkResult));
+
+      // search from post_tags to get the related tags id
+      const checkTagsQuery = `SELECT id FROM post_tags WHERE post_id = ? AND data_status = 'inactive';`;
+      const [checkTagsResult] = await conn.execute(checkTagsQuery, [id]);
+      const checkTagsData = JSON.parse(JSON.stringify(checkTagsResult));
+
+      if (
+        Array.isArray(checkData) &&
+        checkData.length > 0 &&
+        Array.isArray(checkTagsData) &&
+        checkTagsData.length > 0
+      ) {
+        // soft delete from post_tags
+        const removePostTagsQuery = `UPDATE post_tags SET data_status = 'active' WHERE post_id = ? AND data_status = 'inactive';`;
+        const [removePostTagsResult] = await conn.execute(removePostTagsQuery, [
+          id,
+        ]);
+        const removePostTagsData = JSON.parse(
+          JSON.stringify(removePostTagsResult)
+        );
+
+        // soft delete the post
+        const removeQuery = `UPDATE post SET data_status = 'active' WHERE id = ? and data_status = 'inactive';`;
+        const [result] = await conn.execute(removeQuery, [id]);
+        const deletePostData = JSON.parse(JSON.stringify(result));
+
+        conn.commit();
+
+        if (
+          typeof removePostTagsData === "object" &&
+          typeof deletePostData === "object" &&
+          removePostTagsData.affectedRows >= 1 &&
+          deletePostData.affectedRows >= 1
+        ) {
+          return res.send({ data: "remove success" });
+        } else {
+          next(getErrorMsg("500", "remove fail"));
+          writeConsoleLog(
+            "error",
+            `CMS Post POST /delete error.\n removePostTagsData: ${JSON.stringify(
+              removePostTagsData
+            )} \n deletePostData: ${JSON.stringify(deletePostData)}`
+          );
+          cmsWriteErrorLog("CMS Post POST /delete error");
+          cmsWriteErrorLog(removePostTagsData);
+          cmsWriteErrorLog(deletePostData);
+        }
+      } else {
+        next(getErrorMsg("409", "post not found"));
+        conn.rollback();
+        return;
+      }
+    } catch (error) {
+      writeConsoleLog("error", `CMS Post POST /delete error.\n${error}`);
+      next(getErrorMsg("500", "", error));
+      conn.rollback();
+      return;
+    } finally {
+      if (conn) {
+        conn.release();
+      }
     }
   }
 );
