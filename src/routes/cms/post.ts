@@ -178,7 +178,6 @@ cmsPostRouter.get(
 );
 
 // delete post
-// TODO: need to test
 cmsPostRouter.post(
   "/delete",
   async (req: SessionRequest, res: Response, next: NextFunction) => {
@@ -198,12 +197,12 @@ cmsPostRouter.post(
       await conn.beginTransaction();
 
       // check post id exists
-      const checkQuery = `SELECT id FROM post WHERE id = ? AND data_status = 'inactive';`;
+      const checkQuery = `SELECT id FROM post WHERE id = ? AND data_status = 'active';`;
       const [checkResult] = await conn.execute(checkQuery, [id]);
       const checkData = JSON.parse(JSON.stringify(checkResult));
 
       // search from post_tags to get the related tags id
-      const checkTagsQuery = `SELECT id FROM post_tags WHERE post_id = ? AND data_status = 'inactive';`;
+      const checkTagsQuery = `SELECT id FROM post_tags WHERE post_id = ? AND data_status = 'active';`;
       const [checkTagsResult] = await conn.execute(checkTagsQuery, [id]);
       const checkTagsData = JSON.parse(JSON.stringify(checkTagsResult));
 
@@ -214,7 +213,7 @@ cmsPostRouter.post(
         checkTagsData.length > 0
       ) {
         // soft delete from post_tags
-        const removePostTagsQuery = `UPDATE post_tags SET data_status = 'active' WHERE post_id = ? AND data_status = 'inactive';`;
+        const removePostTagsQuery = `UPDATE post_tags SET data_status = 'inactive' WHERE post_id = ? AND data_status = 'active';`;
         const [removePostTagsResult] = await conn.execute(removePostTagsQuery, [
           id,
         ]);
@@ -223,7 +222,7 @@ cmsPostRouter.post(
         );
 
         // soft delete the post
-        const removeQuery = `UPDATE post SET data_status = 'active' WHERE id = ? and data_status = 'inactive';`;
+        const removeQuery = `UPDATE post SET data_status = 'inactive' WHERE id = ? and data_status = 'active';`;
         const [result] = await conn.execute(removeQuery, [id]);
         const deletePostData = JSON.parse(JSON.stringify(result));
 
