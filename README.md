@@ -88,5 +88,8 @@ Used docker image:
 ### Migrate to all tables
 ```npx sequelize-cli db:migrate```
 
+### Undo last migration
+```npx sequelize-cli db:migrate:undo```
+
 ### View Migration Status
 ```npx sequelize-cli db:migrate:status```
