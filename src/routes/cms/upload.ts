@@ -4,7 +4,15 @@ import multer from "multer";
 import ImageUploader from "@/modules/image-upload/image_uploader";
 import os from "os";
 import { getToken } from "@/modules/google_oauth/oauth_db";
-import { getClientID, startGoogleAuth } from "@/modules/google_oauth/oauth";
+import {
+  getClientID,
+  setCredentials,
+  startGoogleAuth,
+} from "@/modules/google_oauth/oauth";
+import {
+  validateFileSize,
+  validateFileType,
+} from "@/modules/image-upload/image_validator";
 
 const cmsUploaderRouter = express.Router();
 
@@ -18,13 +26,44 @@ cmsUploaderRouter.post(
   "/",
   upload.single("file"),
   async (req: SessionRequest, res: Response, next: NextFunction) => {
-    // TODO: get access and refresh token from db
-    const tokenResult = await getToken(getClientID());
+    if (!req.file || !req.file.path) {
+      return res.send({
+        success: false,
+        type: "error",
+        data: "No file provided",
+      });
+    }
 
-    return res.send({
-      type: "redirect",
-      data: startGoogleAuth(),
-    });
+    // validate upload file
+    const fileSizeValid = validateFileSize(req.file);
+    if (!fileSizeValid.success) {
+      return res.send(fileSizeValid);
+    }
+
+    const fileTypeValid = validateFileType(req.file);
+    if (!fileTypeValid.success) {
+      return res.send(fileTypeValid);
+    }
+
+    // get access and refresh token from db
+
+    let tokenSuccess = false;
+    const tokenResult = await getToken(getClientID());
+    if (tokenResult.success) {
+      setCredentials(
+        tokenResult.data.refreshToken,
+        tokenResult.data.accessToken
+      );
+      return res.send(await ImageUploader(req.file));
+    } else {
+      if (!tokenSuccess) {
+        return res.send({
+          success: false,
+          type: "redirect",
+          data: startGoogleAuth(),
+        });
+      }
+    }
   }
 );
 

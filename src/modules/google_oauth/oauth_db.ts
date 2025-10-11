@@ -11,6 +11,10 @@ const insertToken = async (
   expiry_date: number
 ): Promise<{ success: boolean; data: any }> => {
   try {
+    // delete previous record in db
+    const deleteQuery = "DELETE FROM google_oauth_tokens;";
+    const [deleteResult] = await dbPool.execute(deleteQuery);
+
     const encryptAccess = encrypt(accessToken);
     const encryptRefresh = encrypt(refreshToken);
 
@@ -52,9 +56,8 @@ const insertToken = async (
 const getToken = async (
   clientID: string
 ): Promise<{ success: boolean; data: any }> => {
-  // TODO: need to test
   try {
-    const query = `SELECT * FROM google_oauth_tokens WHERE client_id = ? order by expiry_date DESC LIMIT 1 OFFSET 0;`;
+    const query = `SELECT * FROM google_oauth_tokens WHERE client_id = ? order by expires_at DESC LIMIT 1 OFFSET 0;`;
     const [queryResult] = await dbPool.execute(query, [clientID]);
     let data = JSON.parse(JSON.stringify(queryResult));
 
@@ -86,7 +89,7 @@ const getToken = async (
     } else {
       writeConsoleLog("error", `getToken error.\n${JSON.stringify(data)}`);
       cmsWriteErrorLog("getToken error");
-      cmsWriteErrorLog(data);
+      cmsWriteErrorLog(JSON.stringify(data));
       return { success: false, data: data };
     }
   } catch (error) {
