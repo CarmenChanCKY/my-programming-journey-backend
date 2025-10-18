@@ -1,4 +1,4 @@
-import express, { Express } from "express";
+import express, { Express, Request, Response } from "express";
 import { getEnvironmentVar } from "config/env/env";
 import { customErrorHandler } from "@/middleware/error-handler/error_handler";
 import {
@@ -22,6 +22,8 @@ import tagsRouter from "@/routes/tag";
 import cmsTagsRouter from "@/routes/cms/tags";
 import cmsCategoriesRouter from "@/routes/cms/categories";
 import cmsPostRouter from "@/routes/cms/post";
+import cmsUploaderRouter from "@/routes/cms/upload";
+import { receiveAuthCallback } from "@/modules/google_oauth/oauth";
 
 const app: Express = express();
 const port = getEnvironmentVar("PORT", 3000);
@@ -74,11 +76,74 @@ app.use(
   cmsCategoriesRouter
 );
 
+app.use("/cms/post", cmsRateLimitMiddleware, verifySession(), cmsPostRouter);
+
 app.use(
-  "/cms/post",
+  "/cms/upload",
   cmsRateLimitMiddleware,
-  /* verifySession(), */
-  cmsPostRouter
+  verifySession(),
+  cmsUploaderRouter
+);
+
+// for google auth callback
+app.use(
+  getEnvironmentVar("GOOGLE_API_REDIRECT_PATHNAME"),
+  async (req: Request, res: Response) => {
+    // callback about the auth callback is success / fail
+    const handleCallback = await receiveAuthCallback(
+      String(req.query.code || "")
+    );
+
+    let success = false;
+    let message = "";
+
+    if (handleCallback.success) {
+      success = true;
+      message =
+        "Authentication Success. Please close this window and upload again.";
+    } else {
+      message = `Authentication Fail. Reason: ${handleCallback.data}`;
+    }
+
+    const result = `<!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Authentication Result</title>
+        <style>
+            html,
+            body {
+                margin: 0;
+                padding: 0;
+                height: 100dvh;
+            }
+            .main {
+                max-width: 900px;
+                margin: 0 auto;
+                height: 100%;
+            }
+            .main .content {
+                height: 100%;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="main">
+            <div class="content">
+                <h1>${success ? "Success" : "Fail"}</h1>
+                <p>${message}</p>
+            </div>
+        </div>
+    </body>
+    </html>`;
+
+    res.send(result);
+  }
 );
 
 // error handler for supertoken
