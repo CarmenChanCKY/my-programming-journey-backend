@@ -31,4 +31,8 @@ const decrypt = (ciphertext: string, ivStr: string, tagStr: string) => {
   return decrypted.toString("utf8");
 };
 
-export { encrypt, decrypt };
+const generateUUIDStr = () => {
+  return crypto.randomUUID().toString();
+};
+
+export { encrypt, decrypt, generateUUIDStr };

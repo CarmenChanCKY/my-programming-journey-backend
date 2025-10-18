@@ -49,6 +49,8 @@ const insertToken = async (
     }
   } catch (error: any) {
     writeConsoleLog("error", `insertToken catch error.\n${error}`);
+    cmsWriteErrorLog("insertToken catch error");
+    cmsWriteErrorLog(error);
     return { success: false, data: error };
   }
 };
@@ -92,8 +94,10 @@ const getToken = async (
       cmsWriteErrorLog(JSON.stringify(data));
       return { success: false, data: data };
     }
-  } catch (error) {
+  } catch (error: any) {
     writeConsoleLog("error", `getToken catch error.\n${error}`);
+    cmsWriteErrorLog("getToken catch error");
+    cmsWriteErrorLog(error);
     return { success: false, data: error };
   }
 };

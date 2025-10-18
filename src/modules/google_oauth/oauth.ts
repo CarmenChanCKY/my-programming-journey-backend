@@ -17,8 +17,8 @@ client.on("tokens", async (tokens: any) => {
     return insertToken(
       clientId,
       tokens.access_token ?? "",
-      tokens.scope ?? "",
       tokens.refresh_token ?? "",
+      tokens.scope ?? "",
       tokens.token_type ?? "",
       tokens.expiry_date ?? 0
     );
@@ -43,6 +43,10 @@ const getClientID = () => {
 
 const getOauth2Client = (): OAuth2Client => {
   return client;
+};
+
+const getDestFolderID = (): string => {
+  return getEnvironmentVar("GOOGLE_API_DESTINATION_FOLDER_ID");
 };
 
 const setCredentials = (refreshToken: string, accessToken: string) => {
@@ -81,8 +85,8 @@ const receiveAuthCallback = async (
     return insertToken(
       clientId,
       tokens.access_token ?? "",
-      tokens.scope ?? "",
       tokens.refresh_token ?? "",
+      tokens.scope ?? "",
       tokens.token_type ?? "",
       tokens.expiry_date ?? 0
     );
@@ -99,4 +103,5 @@ export {
   receiveAuthCallback,
   getOauth2Client,
   setCredentials,
+  getDestFolderID,
 };

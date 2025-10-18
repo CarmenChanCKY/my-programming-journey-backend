@@ -46,8 +46,6 @@ cmsUploaderRouter.post(
     }
 
     // get access and refresh token from db
-
-    let tokenSuccess = false;
     const tokenResult = await getToken(getClientID());
     if (tokenResult.success) {
       setCredentials(
@@ -56,13 +54,11 @@ cmsUploaderRouter.post(
       );
       return res.send(await ImageUploader(req.file));
     } else {
-      if (!tokenSuccess) {
-        return res.send({
-          success: false,
-          type: "redirect",
-          data: startGoogleAuth(),
-        });
-      }
+      return res.send({
+        success: false,
+        type: "redirect",
+        data: startGoogleAuth(),
+      });
     }
   }
 );

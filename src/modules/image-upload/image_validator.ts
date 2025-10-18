@@ -31,4 +31,41 @@ const validateFileType = (
   return { success: true, data: "" };
 };
 
-export { validateFileSize, validateFileType };
+const getFileExtension = (mimeType: string): string => {
+  let result = "";
+  switch (mimeType) {
+    case "image/jpeg":
+      result = ".jpeg";
+      break;
+    case "image/jpg":
+      result = ".jpg";
+      break;
+    case "image/png":
+      result = ".png";
+      break;
+    case "image/gif":
+      result = ".gif";
+      break;
+    default:
+      result = `.${mimeType.split("/")[1]}`;
+      break;
+  }
+
+  return result;
+};
+
+const convertGoogleDriveLink = (shareLink: string): string => {
+  const match = shareLink.match(/\/file\/d\/([^/]+)/);
+  if (!match) {
+    return "";
+  }
+  const fileId = match[1];
+  return `https://lh3.googleusercontent.com/d/${fileId}`;
+};
+
+export {
+  validateFileSize,
+  validateFileType,
+  getFileExtension,
+  convertGoogleDriveLink,
+};
