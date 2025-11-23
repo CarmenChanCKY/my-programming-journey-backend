@@ -177,6 +177,77 @@ cmsPostRouter.get(
   }
 );
 
+// get post by id
+cmsPostRouter.get(
+  "/detail",
+  async (req: SessionRequest, res: Response, next: NextFunction) => {
+    try {
+      let id: any = req.query.id;
+      if (!isNaN(Number(id))) {
+        id = parseInt(id);
+      }
+
+      let validateID = await validateQueryString({ id });
+
+      if (!validateID) {
+        next(getErrorMsg("404", "invalid post id"));
+        return;
+      }
+
+      const postQuery = `SELECT post.* FROM post WHERE post.data_status = 'active' AND post.id = ?`;
+
+      const [postResult] = await dbPool.execute(postQuery, [id]);
+
+      const postData = JSON.parse(JSON.stringify(postResult));
+
+      if (Array.isArray(postData) && postData.length > 0) {
+        if (
+          postData[0].meta_keyword === undefined ||
+          postData[0].meta_keyword === null ||
+          postData[0].meta_keyword === ""
+        ) {
+          if (
+            postData[0].tags_postData !== undefined &&
+            postData[0].tags_postData !== null &&
+            postData[0].tags_postData != ""
+          ) {
+            postData[0].meta_keyword = postData[0].tags_postData
+              .map((obj: any) => {
+                return obj.name;
+              })
+              .join(", ");
+          } else {
+            postData[0].meta_keyword = "";
+          }
+        }
+
+        // get post tags
+        const tagsQuery = `SELECT id, tags_id FROM post_tags WHERE post_id = ? AND data_status = 'active'`;
+        const [tagsResult] = await dbPool.execute(tagsQuery, [id]);
+        const tagsData = JSON.parse(JSON.stringify(tagsResult));
+
+        // get post reference
+        const postRefQuery = `SELECT id, name, hyperlink FROM post_reference WHERE post_id = ? AND data_status = 'active'`;
+        const [postRefResult] = await dbPool.execute(postRefQuery, [id]);
+        const postRefData = JSON.parse(JSON.stringify(postRefResult));
+
+        res.send({
+          post_data: postData[0],
+          tags_data: tagsData,
+          post_reference: postRefData,
+        });
+      } else {
+        next(getErrorMsg("404", "post not found"));
+        return;
+      }
+    } catch (error) {
+      writeConsoleLog("error", `CMS Post /detail error.\n${error}`);
+      next(getErrorMsg("500", "", error));
+      return;
+    }
+  }
+);
+
 // delete post
 cmsPostRouter.post(
   "/delete",
