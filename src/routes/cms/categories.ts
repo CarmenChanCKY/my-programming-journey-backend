@@ -181,6 +181,34 @@ cmsCategoriesRouter.get(
   }
 );
 
+// get category list for post detail
+cmsCategoriesRouter.get(
+  "/id-name-list",
+  async (req: SessionRequest, res: Response, next: NextFunction) => {
+    try {
+      const query = `SELECT category.id, category.name FROM category AS category
+        WHERE category.data_status = 'active'
+        ORDER BY category.id ASC;`;
+
+      const [result] = await dbPool.execute(query, []);
+      const data = JSON.parse(JSON.stringify(result));
+
+      if (Array.isArray(data) && data.length > 0) {
+        return res.send({ data });
+      } else {
+        return res.send([]);
+      }
+    } catch (error) {
+      writeConsoleLog(
+        "error",
+        `CMS Category GET /id-name-list error.\n${error}`
+      );
+      next(getErrorMsg("500", "", error));
+      return;
+    }
+  }
+);
+
 // add new category
 cmsCategoriesRouter.post(
   "/add",
