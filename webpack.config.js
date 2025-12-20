@@ -1,6 +1,6 @@
 const path = require("path");
 const nodeExternals = require("webpack-node-externals");
-const WebpackShellPlugin = require("webpack-shell-plugin");
+const WebpackShellPluginNext = require("webpack-shell-plugin-next");
 const TsconfigPathsPlugin = require("tsconfig-paths-webpack-plugin");
 
 module.exports = {
@@ -21,8 +21,8 @@ module.exports = {
     extensions: [".ts", ".tsx", ".js"],
   },
   plugins: [
-    new WebpackShellPlugin({
-      onBuildEnd: ["npm run run:dev"],
+    new WebpackShellPluginNext({
+      onBuildEnd: { scripts: ["npm run run:dev"] },
     }),
   ],
   module: {

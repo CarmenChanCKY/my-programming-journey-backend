@@ -1,5 +1,5 @@
 import { Express } from "express";
-import { rateLimit } from "express-rate-limit";
+import { ipKeyGenerator, rateLimit } from "express-rate-limit";
 import { mw, getClientIp } from "request-ip";
 import { getErrorMsg } from "@/middleware/error-handler/error_handler";
 import { writeErrorLog } from "@/modules/logger";
@@ -10,7 +10,10 @@ const rateLimitMiddleware = rateLimit({
   headers: true,
   requestPropertyName: "MPJPublicRateLimit",
   keyGenerator: (req, res) => {
-    return getClientIp(req) || req.ip;
+    if (req.query.apiKey) return String(req.query.apiKey);
+
+    const ipv6Subnet = 64;
+    return ipKeyGenerator(getClientIp(req) || req.ip || "", ipv6Subnet);
   },
   handler: (req, res, next, options) => {
     writeErrorLog(JSON.stringify(options));
@@ -26,7 +29,10 @@ const cmsRateLimitMiddleware = rateLimit({
   headers: true,
   requestPropertyName: "MPJCMSRateLimit",
   keyGenerator: (req, res) => {
-    return getClientIp(req) || req.ip;
+    if (req.query.apiKey) return String(req.query.apiKey);
+
+    const ipv6Subnet = 64;
+    return ipKeyGenerator(getClientIp(req) || req.ip || "", ipv6Subnet);
   },
   handler: (req, res, next, options) => {
     writeErrorLog(JSON.stringify(options));
