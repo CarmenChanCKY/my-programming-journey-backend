@@ -63,9 +63,19 @@ const convertGoogleDriveLink = (shareLink: string): string => {
   return `https://lh3.googleusercontent.com/d/${fileId}`;
 };
 
+const getFileIDFromGoogleDriveLink = (link: string): string => {
+  const split = link.split("https://lh3.googleusercontent.com/d/");
+  if (split.length >= 2) {
+    return split[split.length - 1];
+  }
+
+  return "";
+};
+
 export {
   validateFileSize,
   validateFileType,
   getFileExtension,
   convertGoogleDriveLink,
+  getFileIDFromGoogleDriveLink,
 };
