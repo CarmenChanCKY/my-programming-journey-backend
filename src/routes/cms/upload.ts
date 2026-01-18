@@ -1,7 +1,7 @@
 import express, { NextFunction, Response } from "express";
 import { SessionRequest } from "supertokens-node/framework/express";
 import multer from "multer";
-import ImageUploader from "@/modules/image-upload/image_uploader";
+import ImageUploader from "@/modules/image_upload/image_uploader";
 import os from "os";
 import { getToken } from "@/modules/google_oauth/oauth_db";
 import {
@@ -12,7 +12,7 @@ import {
 import {
   validateFileSize,
   validateFileType,
-} from "@/modules/image-upload/image_validator";
+} from "@/modules/image_upload/image_validator";
 
 const cmsUploaderRouter = express.Router();
 

@@ -52,7 +52,7 @@ cmsTagsRouter.get(
 
         validatePage = await validateQueryString(
           { pages },
-          { groups: ["normalPage"] }
+          { groups: ["normalPage"] },
         );
       }
     } else {
@@ -143,7 +143,7 @@ cmsTagsRouter.get(
       next(getErrorMsg("500", "", error));
       return;
     }
-  }
+  },
 );
 
 // get used tags name and id
@@ -173,12 +173,12 @@ cmsTagsRouter.get(
     } catch (error) {
       writeConsoleLog(
         "error",
-        `CMS Tag GET /filter-tags-list error.\n${error}`
+        `CMS Tag GET /filter-tags-list error.\n${error}`,
       );
       next(getErrorMsg("500", "", error));
       return;
     }
-  }
+  },
 );
 
 // get tag list for post detail
@@ -203,7 +203,7 @@ cmsTagsRouter.get(
       next(getErrorMsg("500", "", error));
       return;
     }
-  }
+  },
 );
 
 // add new tag
@@ -241,13 +241,13 @@ cmsTagsRouter.post(
         if (typeof resultData === "object") {
           return res.send({ data: "insert success" });
         } else {
-          next(getErrorMsg("500", "insert fail"));
           writeConsoleLog(
             "error",
-            `CMS Tag POST /add error.\n${JSON.stringify(resultData)}`
+            `CMS Tag POST /add error.\n${JSON.stringify(resultData)}`,
           );
           cmsWriteErrorLog("CMS Tag POST /add error");
           cmsWriteErrorLog(resultData);
+          next(getErrorMsg("500", "insert fail"));
           return;
         }
       }
@@ -256,7 +256,7 @@ cmsTagsRouter.post(
       next(getErrorMsg("500", "", error));
       return;
     }
-  }
+  },
 );
 
 // update tag
@@ -299,7 +299,7 @@ cmsTagsRouter.post(
           next(getErrorMsg("500", "update fail"));
           writeConsoleLog(
             "error",
-            `CMS Tag POST /update error.\n${JSON.stringify(resultData)}`
+            `CMS Tag POST /update error.\n${JSON.stringify(resultData)}`,
           );
           cmsWriteErrorLog("CMS Tag POST /update error");
           cmsWriteErrorLog(resultData);
@@ -311,7 +311,7 @@ cmsTagsRouter.post(
       next(getErrorMsg("500", "", error));
       return;
     }
-  }
+  },
 );
 
 // delete tag
@@ -359,7 +359,7 @@ cmsTagsRouter.post(
             next(getErrorMsg("500", "remove fail"));
             writeConsoleLog(
               "error",
-              `CMS Tag POST /delete error.\n${JSON.stringify(resultData)}`
+              `CMS Tag POST /delete error.\n${JSON.stringify(resultData)}`,
             );
             cmsWriteErrorLog("CMS Tag POST /delete error");
             cmsWriteErrorLog(resultData);
@@ -375,7 +375,7 @@ cmsTagsRouter.post(
       next(getErrorMsg("500", "", error));
       return;
     }
-  }
+  },
 );
 
 export default cmsTagsRouter;

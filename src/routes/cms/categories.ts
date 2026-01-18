@@ -52,7 +52,7 @@ cmsCategoriesRouter.get(
 
         validatePage = await validateQueryString(
           { pages },
-          { groups: ["normalPage"] }
+          { groups: ["normalPage"] },
         );
       }
     } else {
@@ -143,7 +143,7 @@ cmsCategoriesRouter.get(
       next(getErrorMsg("500", "", error));
       return;
     }
-  }
+  },
 );
 
 // get used category id and name
@@ -173,12 +173,12 @@ cmsCategoriesRouter.get(
     } catch (error) {
       writeConsoleLog(
         "error",
-        `CMS Category GET /filter-category-list error.\n${error}`
+        `CMS Category GET /filter-category-list error.\n${error}`,
       );
       next(getErrorMsg("500", "", error));
       return;
     }
-  }
+  },
 );
 
 // get category list for post detail
@@ -201,12 +201,12 @@ cmsCategoriesRouter.get(
     } catch (error) {
       writeConsoleLog(
         "error",
-        `CMS Category GET /id-name-list error.\n${error}`
+        `CMS Category GET /id-name-list error.\n${error}`,
       );
       next(getErrorMsg("500", "", error));
       return;
     }
-  }
+  },
 );
 
 // add new category
@@ -244,13 +244,13 @@ cmsCategoriesRouter.post(
         if (typeof resultData === "object") {
           return res.send({ data: "insert success" });
         } else {
-          next(getErrorMsg("500", "insert fail"));
           writeConsoleLog(
             "error",
-            `CMS Category POST /add error.\n${JSON.stringify(resultData)}`
+            `CMS Category POST /add error.\n${JSON.stringify(resultData)}`,
           );
           cmsWriteErrorLog("CMS Category POST /add error");
           cmsWriteErrorLog(resultData);
+          next(getErrorMsg("500", "insert fail"));
           return;
         }
       }
@@ -259,7 +259,7 @@ cmsCategoriesRouter.post(
       next(getErrorMsg("500", "", error));
       return;
     }
-  }
+  },
 );
 
 // update category
@@ -299,13 +299,13 @@ cmsCategoriesRouter.post(
         if (typeof resultData === "object" && resultData.affectedRows >= 1) {
           return res.send({ data: "update success" });
         } else {
-          next(getErrorMsg("500", "update fail"));
           writeConsoleLog(
             "error",
-            `CMS Category POST /update error.\n${JSON.stringify(resultData)}`
+            `CMS Category POST /update error.\n${JSON.stringify(resultData)}`,
           );
           cmsWriteErrorLog("CMS Category POST /update error");
           cmsWriteErrorLog(resultData);
+          next(getErrorMsg("500", "update fail"));
           return;
         }
       }
@@ -314,7 +314,7 @@ cmsCategoriesRouter.post(
       next(getErrorMsg("500", "", error));
       return;
     }
-  }
+  },
 );
 
 // delete category
@@ -359,13 +359,13 @@ cmsCategoriesRouter.post(
           if (typeof resultData === "object" && resultData.affectedRows >= 1) {
             return res.send({ data: "remove success" });
           } else {
-            next(getErrorMsg("500", "remove fail"));
             writeConsoleLog(
               "error",
-              `CMS Category POST /delete error.\n${JSON.stringify(resultData)}`
+              `CMS Category POST /delete error.\n${JSON.stringify(resultData)}`,
             );
             cmsWriteErrorLog("CMS Category POST /delete error");
             cmsWriteErrorLog(resultData);
+            next(getErrorMsg("500", "remove fail"));
             return;
           }
         }
@@ -378,7 +378,7 @@ cmsCategoriesRouter.post(
       next(getErrorMsg("500", "", error));
       return;
     }
-  }
+  },
 );
 
 export default cmsCategoriesRouter;
