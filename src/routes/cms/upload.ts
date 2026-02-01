@@ -3,12 +3,6 @@ import { SessionRequest } from "supertokens-node/framework/express";
 import multer from "multer";
 import ImageUploader from "@/modules/image_upload/image_uploader";
 import os from "os";
-import { getToken } from "@/modules/google_oauth/oauth_db";
-import {
-  getClientID,
-  setCredentials,
-  startGoogleAuth,
-} from "@/modules/google_oauth/oauth";
 import {
   validateFileSize,
   validateFileType,
@@ -45,21 +39,7 @@ cmsUploaderRouter.post(
       return res.send(fileTypeValid);
     }
 
-    // get access and refresh token from db
-    const tokenResult = await getToken(getClientID());
-    if (tokenResult.success) {
-      setCredentials(
-        tokenResult.data.refreshToken,
-        tokenResult.data.accessToken
-      );
-      return res.send(await ImageUploader(req.file));
-    } else {
-      return res.send({
-        success: false,
-        type: "redirect",
-        data: startGoogleAuth(),
-      });
-    }
+    return res.send(await ImageUploader(req.file));
   }
 );
 

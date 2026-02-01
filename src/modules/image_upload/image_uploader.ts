@@ -1,5 +1,7 @@
 import { google } from "googleapis";
 import {
+  apiSetCredentials,
+  checkIsAuthError,
   getDestFolderID,
   getOauth2Client,
   startGoogleAuth,
@@ -12,6 +14,12 @@ const fs = require("fs");
 
 const ImageUploader = async (file: any) => {
   try {
+    // get access and refresh token from db
+    const { success, type, data } = await apiSetCredentials();
+    if (!success) {
+      return { success, type, data };
+    }
+
     const authClient = getOauth2Client();
     const drive = google.drive({ version: "v3", auth: authClient });
 
@@ -82,42 +90,14 @@ const ImageUploader = async (file: any) => {
       fs.unlinkSync(file.path);
     }
 
-    if (err && err.message === "NO_REFRESH_TOKEN" && err.reauthUrl) {
-      // reauth required
-      return {
-        success: false,
-        type: "redirect",
-        data: {
-          error: "REAUTH_REQUIRED",
-          reauthUrl: err.reauthUrl,
-        },
-      };
+    const { type, data } = checkIsAuthError(err);
+    if (type === "redirect") {
+      return { success: false, type, data };
+    } else {
+      writeConsoleLog("error", `ImageUploader error.\n${JSON.stringify(data)}`);
+      cmsWriteErrorLog(`ImageUploader error.\n${JSON.stringify(data)}`);
+      return { success: false, type: "error", data };
     }
-
-    // handle invalid_grant or revoked refresh token
-    const msg = err?.response?.data || err?.message || String(err);
-    if (
-      (typeof msg === "object" &&
-        (msg.error === "invalid_grant" ||
-          msg.error === "unauthorized_client")) ||
-      err.message.includes("Request had invalid authentication credentials.")
-    ) {
-      return {
-        success: false,
-        type: "redirect",
-        data: {
-          error: "REAUTH_REQUIRED",
-          reauthUrl: startGoogleAuth(),
-        },
-      };
-    }
-
-    writeConsoleLog(
-      "error",
-      `ImageUploader error.\n${JSON.stringify(err.message)}`
-    );
-    cmsWriteErrorLog(`ImageUploader error.\n${JSON.stringify(err.message)}`);
-    return { success: false, type: "error", data: err.message || String(err) };
   }
 };
 

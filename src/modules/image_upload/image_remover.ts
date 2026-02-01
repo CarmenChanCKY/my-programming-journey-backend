@@ -1,24 +1,28 @@
-// TODO: https://developers.google.com/workspace/drive/api/reference/rest/v2/files/trash
-
 import { google } from "googleapis";
 import {
+  apiSetCredentials,
+  checkIsAuthError,
   getDestFolderID,
   getOauth2Client,
-  startGoogleAuth,
 } from "../google_oauth/oauth";
 import { writeConsoleLog, cmsWriteErrorLog } from "../logger";
 
 const ImageRemover = async (fileID: string) => {
   try {
+    // get access and refresh token from db
+    const { success, type, data } = await apiSetCredentials();
+    if (!success) {
+      return { success, type, data };
+    }
+
     const authClient = getOauth2Client();
     const drive = google.drive({ version: "v3", auth: authClient });
 
     const destFolder = getDestFolderID();
-
     const res = await drive.files.update({
       fileId: fileID,
+      addParents: destFolder !== "" ? destFolder : "",
       requestBody: {
-        parents: destFolder !== "" ? [destFolder] : null,
         trashed: true,
       },
     });
@@ -33,44 +37,21 @@ const ImageRemover = async (fileID: string) => {
       };
     }
 
-    return { success: false, data: "No file id remove from Drive" };
+    return {
+      success: false,
+      type: "error",
+      data: "No file id remove from Drive",
+    };
   } catch (err: any) {
-    if (err && err.message === "NO_REFRESH_TOKEN" && err.reauthUrl) {
-      // reauth required
-      return {
-        success: false,
-        type: "redirect",
-        data: {
-          error: "REAUTH_REQUIRED",
-          reauthUrl: err.reauthUrl,
-        },
-      };
+    const { type, data } = checkIsAuthError(err);
+    if (type === "redirect") {
+      return { success: false, type, data };
+    } else {
+      data.fileID = fileID;
+      writeConsoleLog("error", `ImageRemover error.\n${JSON.stringify(data)}`);
+      cmsWriteErrorLog(`ImageRemover error.\n${JSON.stringify(data)}`);
+      return { success: false, type: "error", data };
     }
-
-    // handle invalid_grant or revoked refresh token
-    const msg = err?.response?.data || err?.message || String(err);
-    if (
-      (typeof msg === "object" &&
-        (msg.error === "invalid_grant" ||
-          msg.error === "unauthorized_client")) ||
-      err.message.includes("Request had invalid authentication credentials.")
-    ) {
-      return {
-        success: false,
-        type: "redirect",
-        data: {
-          error: "REAUTH_REQUIRED",
-          reauthUrl: startGoogleAuth(),
-        },
-      };
-    }
-
-    writeConsoleLog(
-      "error",
-      `ImageRemover error.\n${JSON.stringify(err.message)}`,
-    );
-    cmsWriteErrorLog(`ImageRemover error.\n${JSON.stringify(err.message)}`);
-    return { success: false, type: "error", data: err.message || String(err) };
   }
 };
 

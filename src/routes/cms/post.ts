@@ -11,6 +11,7 @@ import {
   searchImageListExists,
   tagsChecker,
 } from "@/modules/post_checker";
+import ImageRemover from "@/modules/image_upload/image_remover";
 
 const cmsPostRouter = express.Router();
 
@@ -80,7 +81,7 @@ cmsPostRouter.get(
 
         validatePage = await validateQueryString(
           { pages },
-          { groups: ["normalPage"] },
+          { groups: ["normalPage"] }
         );
       }
     } else {
@@ -136,7 +137,7 @@ cmsPostRouter.get(
 
         valuesArr = [...tagsIDArr, ...valuesArr];
         tagsFilterQuery += ` AND post_tags.tags_id IN (${filterValueCount.join(
-          ",",
+          ","
         )})`;
       }
 
@@ -181,7 +182,7 @@ cmsPostRouter.get(
       next(getErrorMsg("500", "", error));
       return;
     }
-  },
+  }
 );
 
 // get post by id
@@ -252,7 +253,7 @@ cmsPostRouter.get(
       next(getErrorMsg("500", "", error));
       return;
     }
-  },
+  }
 );
 
 // insert new post
@@ -260,7 +261,16 @@ cmsPostRouter.post(
   "/add",
   async (req: SessionRequest, res: Response, next: NextFunction) => {
     //TODO:
-  },
+    const data = req.body;
+
+    // validate post data
+    let validateData = await validatePostFormData(data, "addPost");
+
+    if (!validateData) {
+      next(getErrorMsg("422", "invalid input"));
+      return;
+    }
+  }
 );
 
 // update post
@@ -319,23 +329,25 @@ cmsPostRouter.post(
       }
 
       // check post content
-      let updateFileList = [];
+      let updateFileList: Array<{
+        id: number;
+        fileID: string;
+      }> = [];
+      let removeFileList: Array<{ id: number; fileID: string }> = [];
       if (data.content !== undefined && data.content !== null) {
         data.content = purifyHTML(data.content);
 
         // get image inside content
         const imageList = searchImageFromHTMLStr(data.content);
         if (imageList.length > 0) {
-          const { result, msg, file } = await searchImageListExists(
-            conn,
-            imageList,
-            id,
-          );
+          const { result, msg, updateList, removeList, notFoundList } =
+            await searchImageListExists(conn, imageList, id);
           if (!result) {
-            next(getErrorMsg("422", msg, file));
+            next(getErrorMsg("422", msg, notFoundList));
             return;
           } else {
-            updateFileList = file;
+            updateFileList = updateList;
+            removeFileList = removeList;
           }
         }
       }
@@ -369,7 +381,9 @@ cmsPostRouter.post(
         return;
       }
 
-      const updatePostQuery = `UPDATE post SET ${setClauses.join(", ")} WHERE id = ? AND data_status = 'active'`;
+      const updatePostQuery = `UPDATE post SET ${setClauses.join(
+        ", "
+      )} WHERE id = ? AND data_status = 'active'`;
 
       const [queryResult] = await conn.execute(updatePostQuery, [
         ...values,
@@ -384,7 +398,9 @@ cmsPostRouter.post(
       ) {
         writeConsoleLog(
           "error",
-          `CMS Post POST /update error. update post data fail.\n${JSON.stringify(postResultData)}`,
+          `CMS Post POST /update error. update post data fail.\n${JSON.stringify(
+            postResultData
+          )}`
         );
         cmsWriteErrorLog("CMS Post POST /update error. update post data fail");
         cmsWriteErrorLog(postResultData);
@@ -404,16 +420,16 @@ cmsPostRouter.post(
         const [dbTagsResult] = await conn.execute(searchTagsQuery, [id]);
         let dbTagsData = JSON.parse(JSON.stringify(dbTagsResult));
 
-        if (Array.isArray(dbTagsData) && dbTagsData.length > 0) {
-          let insertData: Array<any> = [];
-          const updateData: Array<any> = [];
-          let removeData: Array<any> = [];
+        let insertData: Array<any> = [];
+        const updateData: Array<any> = [];
+        let removeData: Array<any> = [];
 
+        if (Array.isArray(dbTagsData) && dbTagsData.length > 0) {
           // find out the intersection
           const dbSet = new Set(
             dbTagsData.map((obj) => {
               return obj.tags_id;
-            }),
+            })
           );
           const intersection = [...new Set(data.tags_id_list)].filter((v) => {
             return dbSet.has(v);
@@ -455,104 +471,301 @@ cmsPostRouter.post(
             .map((obj: any) => {
               return obj.tags_id;
             });
+        } else {
+          insertData = data.tags_id_list;
+        }
 
-          if (insertData.length > 0) {
-            const values: any[] = [];
-            insertData.forEach((tagsId: number) => {
-              values.push(id, tagsId);
-            });
+        if (insertData.length > 0) {
+          const values: any[] = [];
+          insertData.forEach((tagsId: number) => {
+            values.push(id, tagsId);
+          });
 
-            const insertTagsQuery = `INSERT INTO post_tags (post_id, tags_id) VALUES ${insertData.map(() => "(?, ?)").join(", ")};`;
-            const [insertResult] = await conn.execute(insertTagsQuery, values);
-            const insertRes = JSON.parse(JSON.stringify(insertResult));
+          const insertTagsQuery = `INSERT INTO post_tags (post_id, tags_id) VALUES ${insertData
+            .map(() => "(?, ?)")
+            .join(", ")};`;
+          const [insertResult] = await conn.execute(insertTagsQuery, values);
+          const insertRes = JSON.parse(JSON.stringify(insertResult));
+          if (!(typeof insertRes === "object" && insertRes.affectedRows >= 1)) {
+            writeConsoleLog(
+              "error",
+              `CMS Post POST /update error. insert tags data fail. \n${JSON.stringify(
+                insertRes
+              )}`
+            );
+            cmsWriteErrorLog(
+              "CMS Post POST /update error. insert tags data fail"
+            );
+            cmsWriteErrorLog(insertRes);
+            conn.rollback();
+            next(getErrorMsg("500", "insert tags data fail"));
+            return;
+          }
+        }
+
+        if (updateData.length > 0) {
+          for (let i = 0; i < updateData.length; i++) {
+            const updateTagsQuery =
+              "UPDATE post_tags SET tags_id = ? WHERE id = ?;";
+
+            const [queryResult] = await conn.execute(updateTagsQuery, [
+              updateData[i].tags_id,
+              id,
+            ]);
+            const tagsResultData = JSON.parse(JSON.stringify(queryResult));
+
             if (
-              !(typeof insertRes === "object" && insertRes.affectedRows >= 1)
+              !(
+                typeof tagsResultData === "object" &&
+                tagsResultData.affectedRows >= 1
+              )
             ) {
               writeConsoleLog(
                 "error",
-                `CMS Post POST /update error. insert tags data fail. \n${JSON.stringify(insertRes)}`,
+                `CMS Post POST /update error. update tags data fail.\n${JSON.stringify(
+                  tagsResultData
+                )}`
               );
               cmsWriteErrorLog(
-                "CMS Post POST /update error. insert tags data fail",
+                "CMS Post POST /update error. update tags data fail"
               );
-              cmsWriteErrorLog(insertRes);
+              cmsWriteErrorLog(tagsResultData);
               conn.rollback();
-              next(getErrorMsg("500", "insert tags data fail"));
+              next(getErrorMsg("500", "update tags data fail"));
               return;
             }
           }
+        }
 
-          if (updateData.length > 0) {
-            for (let i = 0; i < updateData.length; i++) {
-              const updateTagsQuery =
-                "UPDATE post_tags SET tags_id = ? WHERE id = ?;";
+        if (removeData.length > 0) {
+          const removeTagsQuery = `UPDATE post_tags SET data_status = 'inactive' WHERE id IN (${removeData
+            .map((v) => {
+              return "?";
+            })
+            .join(",")});`;
+          const [result] = await conn.execute(removeTagsQuery, [...removeData]);
+          const deleteTagsData = JSON.parse(JSON.stringify(result));
 
-              const [queryResult] = await conn.execute(updateTagsQuery, [
-                updateData[i].tags_id,
-                id,
-              ]);
-              const tagsResultData = JSON.parse(JSON.stringify(queryResult));
+          if (!(Array.isArray(deleteTagsData) && deleteTagsData.length > 0)) {
+            writeConsoleLog(
+              "error",
+              `CMS Post POST /update error. remove tags data fail.\n${JSON.stringify(
+                deleteTagsData
+              )}`
+            );
+            cmsWriteErrorLog(
+              "CMS Post POST /update error. remove tags data fail"
+            );
+            cmsWriteErrorLog(deleteTagsData);
+            conn.rollback();
+            next(getErrorMsg("500", "remove tags data fail"));
+            return;
+          }
+        }
+      }
 
-              if (
-                !(
-                  typeof tagsResultData === "object" &&
-                  tagsResultData.affectedRows >= 1
-                )
-              ) {
-                writeConsoleLog(
-                  "error",
-                  `CMS Post POST /update error. update tags data fail.\n${JSON.stringify(tagsResultData)}`,
-                );
-                cmsWriteErrorLog(
-                  "CMS Post POST /update error. update tags data fail",
-                );
-                cmsWriteErrorLog(tagsResultData);
-                conn.rollback();
-                next(getErrorMsg("500", "update tags data fail"));
-                return;
-              }
+      // insert / remove post reference
+      if (
+        data.post_reference !== undefined &&
+        data.post_reference !== null &&
+        data.post_reference.length > 0
+      ) {
+        // find the existing post reference
+        const searchPostRefQuery = `SELECT id, post_id, name, hyperlink FROM post_reference WHERE post_id = ? AND data_status = 'active';`;
+        const [dbPostRefsResult] = await conn.execute(searchPostRefQuery, [id]);
+        let dbPostRefData = JSON.parse(JSON.stringify(dbPostRefsResult));
+
+        let insertData: Array<any> = [];
+        let removeData: Array<any> = [];
+
+        if (Array.isArray(dbPostRefData) && dbPostRefData.length > 0) {
+          for (let i = 0; i < data.post_reference; i++) {
+            const postRef = data.post_reference[i];
+
+            const searchIndex = dbPostRefData.findIndex((obj: any) => {
+              return (
+                obj.name === postRef.name && obj.hyperlink === postRef.hyperlink
+              );
+            });
+
+            if (searchIndex !== -1) {
+              dbPostRefData.splice(searchIndex, 1);
+              continue;
             }
+
+            insertData.push(postRef);
           }
 
-          if (removeData.length > 0) {
-            const removeTagsQuery = `UPDATE post_tags SET data_status = 'inactive' WHERE id in ${JSON.stringify(
-              removeData
-                .map((v) => {
-                  return "?";
-                })
-                .join(","),
-            )};`;
-            const [result] = await conn.execute(removeTagsQuery, [
-              ...removeData,
-            ]);
-            const deletePostData = JSON.parse(JSON.stringify(result));
+          if (dbPostRefData.length > 0) {
+            removeData = dbPostRefData.map((obj: any) => {
+              return obj.id;
+            });
+          }
+        } else {
+          insertData = data.post_reference;
+        }
 
-            if (!(Array.isArray(deletePostData) && deletePostData.length > 0)) {
+        if (insertData.length > 0) {
+          const values: any[] = [];
+          insertData.forEach((refData: any) => {
+            values.push(id, refData.name, refData.hyperlink);
+          });
+
+          const insertPostRefQuery = `INSERT INTO post_reference (post_id, name, hyperlink) VALUES ${insertData
+            .map(() => "(?, ?, ?)")
+            .join(", ")};`;
+          const [insertResult] = await conn.execute(insertPostRefQuery, values);
+          const insertRes = JSON.parse(JSON.stringify(insertResult));
+          if (!(typeof insertRes === "object" && insertRes.affectedRows >= 1)) {
+            writeConsoleLog(
+              "error",
+              `CMS Post POST /update error. insert post ref data fail. \n${JSON.stringify(
+                insertRes
+              )}`
+            );
+            cmsWriteErrorLog(
+              "CMS Post POST /update error. insert post ref data fail"
+            );
+            cmsWriteErrorLog(insertRes);
+            conn.rollback();
+            next(getErrorMsg("500", "insert post ref data fail"));
+            return;
+          }
+        }
+
+        if (removeData.length > 0) {
+          const removePostRefQuery = `UPDATE post_reference SET data_status = 'inactive' WHERE id IN (${removeData
+            .map((v) => {
+              return "?";
+            })
+            .join(",")});`;
+          const [result] = await conn.execute(removePostRefQuery, [
+            ...removeData,
+          ]);
+          const deletePostRefData = JSON.parse(JSON.stringify(result));
+
+          if (
+            !(Array.isArray(deletePostRefData) && deletePostRefData.length > 0)
+          ) {
+            writeConsoleLog(
+              "error",
+              `CMS Post POST /update error. remove post ref data fail.\n${JSON.stringify(
+                deletePostRefData
+              )}`
+            );
+            cmsWriteErrorLog(
+              "CMS Post POST /update error. remove post ref data fail"
+            );
+            cmsWriteErrorLog(deletePostRefData);
+            conn.rollback();
+            next(getErrorMsg("500", "remove post ref data fail"));
+            return;
+          }
+        }
+      }
+
+      // update image_store
+      if (updateFileList.length > 0) {
+        const updateImgQuery = `UPDATE image_stores SET post_id = ? WHERE id IN (${updateFileList
+          .map((v) => {
+            return "?";
+          })
+          .join(",")});`;
+
+        const [queryResult] = await conn.execute(updateImgQuery, [
+          id,
+          ...updateFileList.map((obj) => {
+            return obj.id;
+          }),
+        ]);
+        const updateImgResultData = JSON.parse(JSON.stringify(queryResult));
+
+        if (
+          !(
+            typeof updateImgResultData === "object" &&
+            updateImgResultData.affectedRows >= 1
+          )
+        ) {
+          writeConsoleLog(
+            "error",
+            `CMS Post POST /update error. update post image data fail.\n${JSON.stringify(
+              updateImgResultData
+            )}`
+          );
+          cmsWriteErrorLog(
+            "CMS Post POST /update error. update post image data fail"
+          );
+          cmsWriteErrorLog(updateImgResultData);
+          conn.rollback();
+          next(getErrorMsg("500", "update post image data fail"));
+          return;
+        }
+      }
+
+      // remove image store
+      if (removeFileList.length > 0) {
+        const removeImgQuery = `DELETE FROM image_stores WHERE id IN (${removeFileList
+          .map((v) => {
+            return "?";
+          })
+          .join(",")});`;
+
+        const [queryResult] = await conn.execute(
+          removeImgQuery,
+          removeFileList.map((obj) => {
+            return obj.id;
+          })
+        );
+        const removeImgResultData = JSON.parse(JSON.stringify(queryResult));
+
+        if (
+          !(
+            typeof removeImgResultData === "object" &&
+            removeImgResultData.affectedRows >= 1
+          )
+        ) {
+          writeConsoleLog(
+            "error",
+            `CMS Post POST /update error. remove post image data fail.\n${JSON.stringify(
+              removeImgResultData
+            )}`
+          );
+          cmsWriteErrorLog(
+            "CMS Post POST /update error. remove post image data fail"
+          );
+          cmsWriteErrorLog(removeImgResultData);
+          conn.rollback();
+          next(getErrorMsg("500", "remove post image data fail"));
+          return;
+        }
+
+        // remove file from google drive
+        for (let i = 0; i < removeFileList.length; i++) {
+          const { success, data, type } = await ImageRemover(
+            removeFileList[i].fileID
+          );
+          if (!success) {
+            if (type === "redirect") {
+              conn.rollback();
+              return res.send(data);
+            } else {
+              // log only
+              // keep the process going
               writeConsoleLog(
                 "error",
-                `CMS Post POST /update error. remove tags data fail.\n${JSON.stringify(deletePostData)}`,
+                `CMS Post POST /update error. remove post image data fail.\n${JSON.stringify(
+                  data
+                )}`
               );
-              cmsWriteErrorLog(
-                "CMS Post POST /update error. remove tags data fail",
-              );
-              cmsWriteErrorLog(deletePostData);
-              conn.rollback();
-              next(getErrorMsg("500", "remove tags data fail"));
-              return;
+              cmsWriteErrorLog(data);
             }
           }
         }
       }
 
-      // update category data
-
-      // update post reference
-
-      // update image_store
-
-      // remove file from google drive (if any)
-
       conn.commit();
+
+      return res.send({ data: "update success" });
     } catch (error) {
       writeConsoleLog("error", `CMS Post POST /update error.\n${error}`);
       conn.rollback();
@@ -563,7 +776,7 @@ cmsPostRouter.post(
         conn.release();
       }
     }
-  },
+  }
 );
 
 // delete post
@@ -590,24 +803,23 @@ cmsPostRouter.post(
       const [checkResult] = await conn.execute(checkQuery, [id]);
       const checkData = JSON.parse(JSON.stringify(checkResult));
 
-      // search from post_tags to get the related tags id
-      const checkTagsQuery = `SELECT id FROM post_tags WHERE post_id = ? AND data_status = 'active';`;
-      const [checkTagsResult] = await conn.execute(checkTagsQuery, [id]);
-      const checkTagsData = JSON.parse(JSON.stringify(checkTagsResult));
-
-      if (
-        Array.isArray(checkData) &&
-        checkData.length > 0 &&
-        Array.isArray(checkTagsData) &&
-        checkTagsData.length > 0
-      ) {
+      if (Array.isArray(checkData) && checkData.length > 0) {
         // soft delete from post_tags
         const removePostTagsQuery = `UPDATE post_tags SET data_status = 'inactive' WHERE post_id = ? AND data_status = 'active';`;
         const [removePostTagsResult] = await conn.execute(removePostTagsQuery, [
           id,
         ]);
         const removePostTagsData = JSON.parse(
-          JSON.stringify(removePostTagsResult),
+          JSON.stringify(removePostTagsResult)
+        );
+
+        // soft delete from post_reference
+        const removePostRefQuery = `UPDATE post_reference SET data_status = 'inactive' WHERE post_id = ? AND data_status = 'active';`;
+        const [removePostRefResult] = await conn.execute(removePostRefQuery, [
+          id,
+        ]);
+        const removePostRefData = JSON.parse(
+          JSON.stringify(removePostRefResult)
         );
 
         // soft delete the post
@@ -620,20 +832,25 @@ cmsPostRouter.post(
         if (
           typeof removePostTagsData === "object" &&
           typeof deletePostData === "object" &&
+          typeof removePostRefData === "object" &&
           removePostTagsData.affectedRows >= 1 &&
-          deletePostData.affectedRows >= 1
+          deletePostData.affectedRows >= 1 &&
+          removePostRefData.affectedRows >= 1
         ) {
           return res.send({ data: "remove success" });
         } else {
           writeConsoleLog(
             "error",
             `CMS Post POST /delete error.\n removePostTagsData: ${JSON.stringify(
-              removePostTagsData,
-            )} \n deletePostData: ${JSON.stringify(deletePostData)}`,
+              removePostTagsData
+            )} \n deletePostData: ${JSON.stringify(
+              deletePostData
+            )} \n removePostRefData: ${JSON.stringify(removePostRefData)}`
           );
           cmsWriteErrorLog("CMS Post POST /delete error");
           cmsWriteErrorLog(removePostTagsData);
           cmsWriteErrorLog(deletePostData);
+          cmsWriteErrorLog(removePostRefData);
           next(getErrorMsg("500", "remove fail"));
           conn.rollback();
           return;
@@ -653,7 +870,7 @@ cmsPostRouter.post(
         conn.release();
       }
     }
-  },
+  }
 );
 
 export default cmsPostRouter;

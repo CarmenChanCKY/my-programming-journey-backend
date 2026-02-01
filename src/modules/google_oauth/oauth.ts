@@ -2,7 +2,7 @@ import { cmsWriteErrorLog, writeConsoleLog } from "@/modules/logger";
 import { getEnvironmentVar } from "config/env/env";
 import { google } from "googleapis";
 import { OAuth2Client } from "google-auth-library";
-import { insertToken } from "./oauth_db";
+import { getToken, insertToken } from "./oauth_db";
 
 const clientId = getEnvironmentVar("GOOGLE_API_CLIENT_ID");
 const clientSecret = getEnvironmentVar("GOOGLE_API_CLIENT_SECRET");
@@ -97,6 +97,52 @@ const receiveAuthCallback = async (
   }
 };
 
+const apiSetCredentials = async () => {
+  const tokenResult = await getToken(getClientID());
+
+  if (tokenResult.success) {
+    setCredentials(tokenResult.data.refreshToken, tokenResult.data.accessToken);
+    return { success: true, type: "", data: "" };
+  } else {
+    return {
+      success: false,
+      type: "redirect",
+      data: startGoogleAuth(),
+    };
+  }
+};
+
+const checkIsAuthError = (err: any) => {
+  if (err && err.message === "NO_REFRESH_TOKEN" && err.reauthUrl) {
+    // reauth required
+    return {
+      type: "redirect",
+      data: {
+        error: "REAUTH_REQUIRED",
+        reauthUrl: err.reauthUrl,
+      },
+    };
+  }
+
+  // handle invalid_grant or revoked refresh token
+  const msg = err?.response?.data || err?.message || String(err);
+  if (
+    (typeof msg === "object" &&
+      (msg.error === "invalid_grant" || msg.error === "unauthorized_client")) ||
+    err.message.includes("Request had invalid authentication credentials.")
+  ) {
+    return {
+      type: "redirect",
+      data: {
+        error: "REAUTH_REQUIRED",
+        reauthUrl: startGoogleAuth(),
+      },
+    };
+  }
+
+  return { type: "error", data: err.message || String(err) };
+};
+
 export {
   getClientID,
   startGoogleAuth,
@@ -104,4 +150,6 @@ export {
   getOauth2Client,
   setCredentials,
   getDestFolderID,
+  apiSetCredentials,
+  checkIsAuthError,
 };
