@@ -1,4 +1,5 @@
 import { validateOrReject } from "class-validator";
+import { plainToInstance } from "class-transformer";
 import PostData from "@/interface/post_data";
 import { writeConsoleLog, writeErrorLog } from "@/modules/logger";
 
@@ -6,11 +7,9 @@ const validatePostFormData = async (
   formData: Object,
   group: string
 ): Promise<boolean> => {
-  const validateData: any = new PostData();
-
-  for (const [key, val] of Object.entries(formData)) {
-    validateData[key] = val;
-  }
+  const validateData = plainToInstance(PostData, formData, {
+    enableImplicitConversion: true,
+  });
 
   let result: boolean = false;
 

@@ -10,8 +10,6 @@ const redirectUri = getEnvironmentVar("GOOGLE_API_REDIRECT_URLS");
 const client = new google.auth.OAuth2(clientId, clientSecret, redirectUri);
 
 client.on("tokens", async (tokens: any) => {
-  console.log("tokens: " + tokens);
-
   try {
     // insert token to db
     return insertToken(

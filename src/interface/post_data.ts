@@ -12,16 +12,17 @@ import {
   ValidateNested,
   IsISO8601,
 } from "class-validator";
+import { Type } from "class-transformer";
 
-class ReferenceItem {
-  @IsDefined()
-  @IsString()
-  @IsNotEmpty()
+export class ReferenceItem {
+  @IsDefined({ groups: ["addPost", "updatePost"] })
+  @IsString({ groups: ["addPost", "updatePost"] })
+  @IsNotEmpty({ groups: ["addPost", "updatePost"] })
   name!: string;
 
-  @IsDefined()
-  @IsString()
-  @IsUrl()
+  @IsDefined({ groups: ["addPost", "updatePost"] })
+  @IsString({ groups: ["addPost", "updatePost"] })
+  @IsUrl({}, { groups: ["addPost", "updatePost"] })
   hyperlink!: string;
 }
 
@@ -131,7 +132,7 @@ export default class PostData {
   @ArrayMinSize(1)
   tags_id_list!: Array<number>;
 
-  // validator for references array
+  // validator for reference array
   @ValidateIf(
     (o) => {
       return Object.keys(o).indexOf("reference") !== -1;
@@ -139,6 +140,7 @@ export default class PostData {
     { groups: ["updatePost"] }
   )
   @IsArray({ groups: ["addPost", "updatePost"] })
+  @Type(() => ReferenceItem)
   @ValidateNested({ each: true, groups: ["addPost", "updatePost"] })
   reference!: ReferenceItem[];
 

@@ -47,6 +47,23 @@ const tagsChecker = async (
   return { result: true, msg: "" };
 };
 
+const slugChecker = async (conn: PoolConnection, slug: string, skipID: number = -1): Promise<{ result: boolean; msg: any }> => {
+  let checkPostSlugQuery = `SELECT id FROM post WHERE slug = ? AND data_status = 'active'`;
+  const params: Array<any> = [slug.trim()];
+  if (skipID !== -1) {
+    checkPostSlugQuery += ` AND id != ? `;
+    params.push(skipID)
+  }
+  const [checkResult] = await conn.execute(checkPostSlugQuery, params);
+  const checkPostSlugData = JSON.parse(JSON.stringify(checkResult));
+
+  if (Array.isArray(checkPostSlugData) && checkPostSlugData.length > 0) {
+    // slug exists
+    return { result: false, msg: getErrorMsg("409", "slug exists") };
+  }
+  return { result: true, msg: "" };
+};
+
 const searchImageListExists = async (
   conn: PoolConnection,
   imageList: Array<string>,
@@ -112,4 +129,4 @@ const searchImageListExists = async (
   };
 };
 
-export { categoryChecker, tagsChecker, searchImageListExists };
+export { categoryChecker, tagsChecker, slugChecker, searchImageListExists };

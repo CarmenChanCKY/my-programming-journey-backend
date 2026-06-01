@@ -1,4 +1,5 @@
 import { dbPool } from "config/database/connect";
+import { PoolConnection } from "mysql2/promise";
 import { cmsWriteErrorLog, writeConsoleLog } from "@/modules/logger";
 
 const insertImage = async (
@@ -122,10 +123,38 @@ const removeImageByPostID = async (
   }
 };
 
+const removeImageByIDList = async (conn: PoolConnection, idList: Array<number>): Promise<{ success: boolean; data: any }> => {
+  try {
+    const removeImgQuery = `DELETE FROM image_stores WHERE id IN (${new Array(idList.length).fill("?")
+      .join(",")});`;
+
+    const [queryResult] = await conn.execute(removeImgQuery, idList);
+    const removeImgResultData = JSON.parse(JSON.stringify(queryResult));
+
+    if (typeof removeImgResultData === "object" && removeImgResultData.affectedRows >= 1) {
+      return { success: true, data: removeImgResultData };
+    } else {
+      writeConsoleLog(
+        "error",
+        `removeImageByIDList error.\n${JSON.stringify(removeImgResultData)}`
+      );
+      cmsWriteErrorLog("removeImageByIDList error");
+      cmsWriteErrorLog(removeImgResultData);
+      return { success: false, data: removeImgResultData };
+    }
+  } catch (error: any) {
+    writeConsoleLog("error", `removeImageByIDList catch error.\n${error}`);
+    cmsWriteErrorLog("removeImageByIDList error");
+    cmsWriteErrorLog(error);
+    return { success: false, data: error };
+  }
+}
+
 export {
   insertImage,
   getImageByFileID,
   getImageByPostID,
   removeImageByFileID,
   removeImageByPostID,
+  removeImageByIDList
 };

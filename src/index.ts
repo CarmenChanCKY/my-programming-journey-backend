@@ -1,4 +1,5 @@
 import express, { Express, Request, Response } from "express";
+import 'reflect-metadata';
 import { getEnvironmentVar } from "config/env/env";
 import { customErrorHandler } from "@/middleware/error-handler/error_handler";
 import {
@@ -48,11 +49,17 @@ app.use(
   })
 );
 
+const allowedOrigins = [
+  getEnvironmentVar("AUTH_WEB_DOMAIN", ""),
+  getEnvironmentVar("FRONTEND_PATH", ""),
+  getEnvironmentVar("CMS_PATH", ""),
+];
+
 // config for supertoken
 const supertokens = initTokens();
 app.use(
   cors({
-    origin: getEnvironmentVar("AUTH_WEB_DOMAIN", ""),
+    origin: allowedOrigins,
     allowedHeaders: ["Content-Type", ...supertokens.getAllCORSHeaders()],
     credentials: true,
   })
