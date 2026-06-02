@@ -51,7 +51,7 @@ postRouter.get(
                           ON tags.id = post_tags.tags_id AND tags.data_status = 'active'
                       WHERE post_tags.data_status = 'active'
                       GROUP BY post_tags.post_id) AS tag ON tag.post_id = post.id
-                  WHERE post.data_status = 'active'
+                  WHERE post.data_status = 'active' AND post.hide_post = 0
                   ORDER BY post.date DESC , post.id DESC
                   LIMIT ${limit} OFFSET ${pages}`;
 
@@ -59,7 +59,7 @@ postRouter.get(
 
       const totalQuery = `SELECT COUNT(post.id) AS post_total
                         FROM post AS post
-                        WHERE post.data_status = 'active'`;
+                        WHERE post.data_status = 'active' AND post.hide_post = 0`;
 
       const [totalResult] = await dbPool.execute(totalQuery, []);
       const data = JSON.parse(JSON.stringify(result));
@@ -114,7 +114,7 @@ postRouter.get(
                       FROM post_reference
                       WHERE post_reference.data_status = 'active'
                       group by post_reference.post_id) AS reference ON post.id = reference.post_id
-                    WHERE post.data_status = 'active' AND post.slug = ?`;
+                    WHERE post.data_status = 'active' AND post.hide_post = 0 AND post.slug = ?`;
 
       const [result] = await dbPool.execute(query, [postSlug]);
 
@@ -171,7 +171,7 @@ postRouter.get(
         return;
       }
 
-      const query = `SELECT title, slug FROM post WHERE id > ? ORDER BY date ASC, id ASC LIMIT 1 OFFSET 0`;
+      const query = `SELECT title, slug FROM post WHERE id > ? AND hide_post = 0 ORDER BY date ASC, id ASC LIMIT 1 OFFSET 0`;
 
       const [result] = await dbPool.execute(query, [id]);
       const data = JSON.parse(JSON.stringify(result));
@@ -206,7 +206,7 @@ postRouter.get(
         return;
       }
 
-      const query = `SELECT title, slug FROM post WHERE id < ? ORDER BY date DESC, id DESC LIMIT 1 OFFSET 0`;
+      const query = `SELECT title, slug FROM post WHERE id < ? AND hide_post = 0 ORDER BY date DESC, id DESC LIMIT 1 OFFSET 0`;
 
       const [result] = await dbPool.execute(query, [id]);
       const data = JSON.parse(JSON.stringify(result));
@@ -262,7 +262,7 @@ postRouter.get(
                     JSON_ARRAYAGG(JSON_OBJECT('date', p.date, 'title', p.title, 'slug', p.slug)) as post_list
                   FROM (SELECT post.date, post.title, post.slug
                         FROM post
-                        WHERE post.data_status = 'active'
+                        WHERE post.data_status = 'active' AND post.hide_post = 0
                         ORDER BY post.date DESC , post.id DESC ${pagingStr}) AS p
                   GROUP BY SUBSTRING_INDEX(p.date, '-', 2)
                   ORDER BY SUBSTRING_INDEX(p.date, '-', 2) DESC`;
@@ -271,7 +271,7 @@ postRouter.get(
 
       const totalQuery = `SELECT COUNT(post.id) AS post_total
                         FROM post AS post
-                        WHERE post.data_status = 'active'`;
+                        WHERE post.data_status = 'active' AND post.hide_post = 0`;
 
       const [totalResult] = await dbPool.execute(totalQuery, []);
       const data = JSON.parse(JSON.stringify(result));

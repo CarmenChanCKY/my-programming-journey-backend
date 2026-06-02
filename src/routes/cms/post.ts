@@ -145,7 +145,7 @@ cmsPostRouter.get(
         )})`;
       }
 
-      const query = `SELECT post.id, post.title, post.date, post.slug, category.name AS category_name, JSON_ARRAYAGG(tag.name) AS tags_data
+      const query = `SELECT post.id, post.title, post.date, post.slug, category.name AS category_name, post.hide_post, JSON_ARRAYAGG(tag.name) AS tags_data
                     FROM post
                     LEFT JOIN category on category.id = post.category_id AND category.data_status = 'active'
                     JOIN (SELECT post_tags.post_id, tags.name
@@ -560,6 +560,7 @@ cmsPostRouter.post(
         "category_id",
         "meta_description",
         "meta_keyword",
+        "hide_post"
       ];
 
       const setClauses: string[] = [];

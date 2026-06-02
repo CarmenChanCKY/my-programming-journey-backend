@@ -82,6 +82,9 @@ Used docker image:
 ### Create Model
 ```npx sequelize-cli model:generate --name [table_name] --attributes [column_name]:[data_type],[column_name]:[data_type]```
 
+## Create New Migration
+```npx sequelize-cli migration:generate --name [name]```
+
 ### Migrate to specific table
 ```npx sequelize-cli db:migrate --to [any file inside /models]```
 

@@ -15,7 +15,7 @@ categoriesRouter.get(
                    FROM post
                    JOIN category ON category.id = post.category_id
                         AND category.data_status = 'active'
-                   WHERE post.data_status = 'active'
+                   WHERE post.data_status = 'active' AND post.hide_post = 0
                    ORDER BY post.date DESC , post.id DESC`;
 
       const [result] = await dbPool.execute(query);
@@ -24,7 +24,7 @@ categoriesRouter.get(
                         FROM post
                         JOIN category ON category.id = post.category_id
                              AND category.data_status = 'active'
-                        WHERE post.data_status = 'active'
+                        WHERE post.data_status = 'active' AND post.hide_post = 0
                         GROUP BY category.id
                         HAVING COUNT(post.id) > 0
                         ORDER BY category_id ASC`;
@@ -115,7 +115,7 @@ categoriesRouter.get(
                           ON tags.id = post_tags.tags_id AND tags.data_status = 'active'
                       WHERE post_tags.data_status = 'active'
                       GROUP BY post_tags.post_id) AS tag ON tag.post_id = post.id
-                  WHERE post.data_status = 'active'
+                  WHERE post.data_status = 'active' AND post.hide_post = 0
                   ORDER BY post.date DESC , post.id DESC
                   LIMIT ${limit} OFFSET ${pages}`;
 
@@ -124,7 +124,7 @@ categoriesRouter.get(
       const totalQuery = `SELECT COUNT(post.id) AS post_total
                         FROM post AS post
                         JOIN category on category.id = post.category_id AND category.data_status = 'active' AND LOWER(category.name) = LOWER(?)
-                        WHERE post.data_status = 'active'`;
+                        WHERE post.data_status = 'active' AND post.hide_post = 0`;
 
       const [totalResult] = await dbPool.execute(totalQuery, [category]);
 

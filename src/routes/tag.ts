@@ -11,15 +11,30 @@ tagsRouter.get(
   "/all",
   async (req: Request, res: Response, next: NextFunction) => {
     try {
+      // get the id of hidden post
+      const hidePostQuery = `SELECT id FROM post WHERE hide_post = 1`;
+      const [hidePostResult] = await dbPool.execute(hidePostQuery);
+      const hideIDList = JSON.parse(JSON.stringify(hidePostResult)).map(
+        (el: any) => {
+          return el.id;
+        },
+      );
+
+      const filterIDQuery =
+        hideIDList.length > 0
+          ? ` AND post_tags.post_id NOT IN (${new Array(hideIDList.length).fill("?").join(",")}) `
+          : ``;
+
       const query = `SELECT tags.id, tags.name, COUNT(post_tags.post_id) AS post_count
                     FROM post_tags AS post_tags
                         JOIN tags AS tags ON tags.id = post_tags.tags_id
                         AND tags.data_status = 'active'
                     WHERE post_tags.data_status = 'active'
+                    ${filterIDQuery}
                     GROUP BY post_tags.tags_id
                     ORDER BY post_count DESC, tags.id ASC;`;
 
-      const [result] = await dbPool.execute(query);
+      const [result] = await dbPool.execute(query, [...hideIDList]);
 
       const data = JSON.parse(JSON.stringify(result));
 
@@ -33,7 +48,7 @@ tagsRouter.get(
       next(getErrorMsg("500", "", error));
       return;
     }
-  }
+  },
 );
 
 tagsRouter.get(
@@ -52,7 +67,7 @@ tagsRouter.get(
 
           validatePage = await validateQueryString(
             { pages },
-            { groups: ["normalPage"] }
+            { groups: ["normalPage"] },
           );
         }
       } else {
@@ -119,6 +134,7 @@ tagsRouter.get(
                           ON category.id = post.category_id
                           AND category.data_status = 'active'
                         WHERE post.data_status = 'active'
+                        AND post.hide_post = 0
                         AND post.id IN (${fillArr.join(",")})
                         ORDER BY post.date DESC , post.id DESC
                         LIMIT ${limit} OFFSET ${pages}`;
@@ -130,6 +146,7 @@ tagsRouter.get(
         const totalQuery = `SELECT COUNT(post.id) AS post_total
           FROM post AS post
           WHERE post.data_status = 'active'
+            AND post.hide_post = 0
             AND post.id IN (${fillArr.join(",")})`;
 
         const [totalResult] = await dbPool.execute(totalQuery, [...postIDList]);
@@ -186,7 +203,7 @@ tagsRouter.get(
       next(getErrorMsg("500", "", error));
       return;
     }
-  }
+  },
 );
 
 export default tagsRouter;

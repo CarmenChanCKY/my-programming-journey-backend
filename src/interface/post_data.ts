@@ -11,6 +11,8 @@ import {
   IsUrl,
   ValidateNested,
   IsISO8601,
+  IsBoolean,
+  Max,
 } from "class-validator";
 import { Type } from "class-transformer";
 
@@ -32,7 +34,7 @@ export default class PostData {
     (o) => {
       return Object.keys(o).indexOf("title") !== -1;
     },
-    { groups: ["updatePost"] } // only evaluate condition when validating updatePost
+    { groups: ["updatePost"] }, // only evaluate condition when validating updatePost
   )
   @IsString({ groups: ["addPost", "updatePost"] })
   @IsDefined({ groups: ["addPost", "updatePost"] })
@@ -44,7 +46,7 @@ export default class PostData {
     (o) => {
       return Object.keys(o).indexOf("date") !== -1;
     },
-    { groups: ["updatePost"] }
+    { groups: ["updatePost"] },
   )
   @IsString({ groups: ["addPost", "updatePost"] })
   @IsDefined({ groups: ["addPost", "updatePost"] })
@@ -57,7 +59,7 @@ export default class PostData {
     (o) => {
       return Object.keys(o).indexOf("content") !== -1;
     },
-    { groups: ["updatePost"] }
+    { groups: ["updatePost"] },
   )
   @IsString({ groups: ["addPost", "updatePost"] })
   @IsDefined({ groups: ["addPost", "updatePost"] })
@@ -69,7 +71,7 @@ export default class PostData {
     (o) => {
       return Object.keys(o).indexOf("slug") !== -1;
     },
-    { groups: ["updatePost"] }
+    { groups: ["updatePost"] },
   )
   @IsString({ groups: ["addPost", "updatePost"] })
   @IsDefined({ groups: ["addPost", "updatePost"] })
@@ -81,7 +83,7 @@ export default class PostData {
     (o) => {
       return Object.keys(o).indexOf("meta_description") !== -1;
     },
-    { groups: ["updatePost"] }
+    { groups: ["updatePost"] },
   )
   @IsString({ groups: ["addPost", "updatePost"] })
   meta_description!: string;
@@ -91,7 +93,7 @@ export default class PostData {
     (o) => {
       return Object.keys(o).indexOf("meta_keyword") !== -1;
     },
-    { groups: ["updatePost"] }
+    { groups: ["updatePost"] },
   )
   @IsString({ groups: ["addPost", "updatePost"] })
   meta_keyword!: string;
@@ -102,7 +104,7 @@ export default class PostData {
     (o) => {
       return Object.keys(o).indexOf("category_id") !== -1;
     },
-    { groups: ["updatePost"] }
+    { groups: ["updatePost"] },
   )
   @IsDefined({
     groups: ["addPost", "updatePost"],
@@ -123,7 +125,7 @@ export default class PostData {
     (o) => {
       return Object.keys(o).indexOf("tags_id_list") !== -1;
     },
-    { groups: ["updatePost"] }
+    { groups: ["updatePost"] },
   )
   @IsArray({})
   @ArrayNotEmpty()
@@ -137,12 +139,28 @@ export default class PostData {
     (o) => {
       return Object.keys(o).indexOf("reference") !== -1;
     },
-    { groups: ["updatePost"] }
+    { groups: ["updatePost"] },
   )
   @IsArray({ groups: ["addPost", "updatePost"] })
   @Type(() => ReferenceItem)
   @ValidateNested({ each: true, groups: ["addPost", "updatePost"] })
   reference!: ReferenceItem[];
+
+  // validate for hide_post
+  @ValidateIf(
+    (o) => {
+      return Object.keys(o).indexOf("hide_post") !== -1;
+    },
+    { groups: ["updatePost"] },
+  )
+  @IsInt({ groups: ["addPost", "updatePost"] })
+  @Min(1, {
+    groups: ["updatePost", "removePost"],
+  })
+  @Max(1, {
+    groups: ["updatePost", "removePost"],
+  })
+  hide_post!: number;
 
   // validator for id
   // for updatePost group and removePost group only
