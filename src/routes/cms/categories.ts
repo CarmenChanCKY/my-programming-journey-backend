@@ -112,7 +112,7 @@ cmsCategoriesRouter.get(
             AND post.data_status = 'active'
         WHERE category.data_status = 'active'
          ${keywordQuery}
-        GROUP BY category.id
+        GROUP BY category.id, category.name
         ${filterQuery}
         ORDER BY category.id DESC
         LIMIT ${limit} OFFSET ${pages};`;
@@ -158,7 +158,7 @@ cmsCategoriesRouter.get(
           LEFT JOIN post AS post ON category.id = post.category_id
             AND post.data_status = 'active'
         WHERE category.data_status = 'active'
-        GROUP BY category.id
+        GROUP BY category.id, category.name
         ${filterQuery}
         ORDER BY category.name ASC;`;
 

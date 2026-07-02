@@ -112,7 +112,7 @@ cmsTagsRouter.get(
                         AND post_tags.data_status = 'active'
                     WHERE tags.data_status = 'active'
                      ${keywordQuery}
-                    GROUP BY tags.id
+                    GROUP BY tags.id, tags.name
                     ${filterQuery}
                     ORDER BY tags.id DESC
                     LIMIT ${limit} OFFSET ${pages};`;
@@ -158,7 +158,7 @@ cmsTagsRouter.get(
                       LEFT JOIN post_tags AS post_tags ON tags.id = post_tags.tags_id
                         AND post_tags.data_status = 'active'
                     WHERE tags.data_status = 'active'
-                    GROUP BY tags.id
+                    GROUP BY tags.id, tags.name
                     ${filterQuery}
                     ORDER BY tags.name ASC;`;
 

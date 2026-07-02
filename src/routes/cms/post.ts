@@ -153,7 +153,7 @@ cmsPostRouter.get(
                             ON tags.id = post_tags.tags_id AND tags.data_status = 'active'
                         WHERE post_tags.data_status = 'active' ${tagsFilterQuery}) AS tag ON tag.post_id = post.id
                     WHERE post.data_status = 'active' ${filterQuery}
-                    GROUP BY post.id
+                    GROUP BY post.id, post.title, post.date, post.slug, category.name, post.hide_post
                     ORDER BY post.date DESC, post.id DESC
                     LIMIT ${limit} OFFSET ${pages}`;
 
