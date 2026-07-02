@@ -1,9 +1,9 @@
-import express, { NextFunction, Response } from "express";
+import express, { NextFunction, Request, Response } from "express";
 import { dbPool } from "config/database/connect";
 import { getErrorMsg } from "@/middleware/error-handler/error_handler";
 import { validateQueryString } from "@/middleware/validator/query_validate";
 import { cmsWriteErrorLog, writeConsoleLog } from "@/modules/logger";
-import { SessionRequest } from "supertokens-node/framework/express";
+
 import { validatePostFormData } from "@/middleware/validator/post_validate";
 import { purifyHTML, searchImageFromHTMLStr } from "@/modules/common_module";
 import {
@@ -22,7 +22,7 @@ const cmsPostRouter = express.Router();
 // get post list
 cmsPostRouter.get(
   "/",
-  async (req: SessionRequest, res: Response, next: NextFunction) => {
+  async (req: Request, res: Response, next: NextFunction) => {
     let pages: any = req.query.pages;
 
     let filterPostTitle: any = req.query.postTitle
@@ -192,7 +192,7 @@ cmsPostRouter.get(
 // get post by id
 cmsPostRouter.get(
   "/detail",
-  async (req: SessionRequest, res: Response, next: NextFunction) => {
+  async (req: Request, res: Response, next: NextFunction) => {
     try {
       let id: any = req.query.id;
       if (!isNaN(Number(id))) {
@@ -263,7 +263,7 @@ cmsPostRouter.get(
 // insert new post
 cmsPostRouter.post(
   "/add",
-  async (req: SessionRequest, res: Response, next: NextFunction) => {
+  async (req: Request, res: Response, next: NextFunction) => {
     const data = req.body;
 
     // validate post data
@@ -465,7 +465,7 @@ cmsPostRouter.post(
 // update post
 cmsPostRouter.post(
   "/update",
-  async (req: SessionRequest, res: Response, next: NextFunction) => {
+  async (req: Request, res: Response, next: NextFunction) => {
     const data = req.body;
 
     // validate post data
@@ -961,7 +961,7 @@ cmsPostRouter.post(
 // delete post
 cmsPostRouter.post(
   "/delete",
-  async (req: SessionRequest, res: Response, next: NextFunction) => {
+  async (req: Request, res: Response, next: NextFunction) => {
     let id = req.body.id;
 
     // validate post id is valid

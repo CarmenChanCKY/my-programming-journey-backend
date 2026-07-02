@@ -12,9 +12,9 @@ import {
   cmsRateLimitMiddleware,
   rateLimitMiddleware,
 } from "@/middleware/rate-limiter/rate_limiter";
-import { middleware, errorHandler } from "supertokens-node/framework/express";
-import { initTokens } from "@/middleware/security-tokens/security_tokens";
-import { verifySession } from "supertokens-node/recipe/session/framework/express";
+import { toNodeHandler } from "better-auth/node";
+import { auth } from "@/middleware/auth/auth";
+import { requireAuth } from "@/middleware/auth/require_auth";
 
 import postRouter from "@/routes/post";
 import searchRouter from "@/routes/search";
@@ -50,21 +50,18 @@ app.use(
 );
 
 const allowedOrigins = [
-  getEnvironmentVar("AUTH_WEB_DOMAIN", ""),
   getEnvironmentVar("FRONTEND_PATH", ""),
   getEnvironmentVar("CMS_PATH", ""),
 ];
 
-// config for supertoken
-const supertokens = initTokens();
 app.use(
   cors({
     origin: allowedOrigins,
-    allowedHeaders: ["Content-Type", ...supertokens.getAllCORSHeaders()],
     credentials: true,
   })
 );
-app.use(middleware());
+
+app.all("/token-admin/*splat", toNodeHandler(auth));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -75,20 +72,20 @@ app.use("/categories", rateLimitMiddleware, categoriesRouter);
 app.use("/tag", rateLimitMiddleware, tagsRouter);
 
 // for cms
-app.use("/cms/tags", cmsRateLimitMiddleware, verifySession(), cmsTagsRouter);
+app.use("/cms/tags", cmsRateLimitMiddleware, requireAuth, cmsTagsRouter);
 app.use(
   "/cms/categories",
   cmsRateLimitMiddleware,
-  verifySession(),
+  requireAuth,
   cmsCategoriesRouter
 );
 
-app.use("/cms/post", cmsRateLimitMiddleware, verifySession(), cmsPostRouter);
+app.use("/cms/post", cmsRateLimitMiddleware, requireAuth, cmsPostRouter);
 
 app.use(
   "/cms/upload",
   cmsRateLimitMiddleware,
-  verifySession(),
+  requireAuth,
   cmsUploaderRouter
 );
 
@@ -153,8 +150,6 @@ app.use(
   }
 );
 
-// error handler for supertoken
-app.use(errorHandler());
 app.use(customErrorHandler);
 
 app.listen(port, () => {

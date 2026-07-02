@@ -1,9 +1,9 @@
-import express, { NextFunction, Response } from "express";
+import express, { NextFunction, Request, Response } from "express";
 import { dbPool } from "config/database/connect";
 import { getErrorMsg } from "@/middleware/error-handler/error_handler";
 import { validateQueryString } from "@/middleware/validator/query_validate";
 import { cmsWriteErrorLog, writeConsoleLog } from "@/modules/logger";
-import { SessionRequest } from "supertokens-node/framework/express";
+
 import { validateCategoryFormData } from "@/middleware/validator/categories_validate";
 
 const cmsCategoriesRouter = express.Router();
@@ -11,7 +11,7 @@ const cmsCategoriesRouter = express.Router();
 // get categories list
 cmsCategoriesRouter.get(
   "/",
-  async (req: SessionRequest, res: Response, next: NextFunction) => {
+  async (req: Request, res: Response, next: NextFunction) => {
     let pages: any = req.query.pages;
     let filter: any = req.query.filterUsedCount
       ?.toString()
@@ -149,7 +149,7 @@ cmsCategoriesRouter.get(
 // get used category id and name
 cmsCategoriesRouter.get(
   "/filter-category-list",
-  async (req: SessionRequest, res: Response, next: NextFunction) => {
+  async (req: Request, res: Response, next: NextFunction) => {
     try {
       let filterQuery = " HAVING COUNT(post.id) > 0 ";
 
@@ -184,7 +184,7 @@ cmsCategoriesRouter.get(
 // get category list for post detail
 cmsCategoriesRouter.get(
   "/id-name-list",
-  async (req: SessionRequest, res: Response, next: NextFunction) => {
+  async (req: Request, res: Response, next: NextFunction) => {
     try {
       const query = `SELECT category.id, category.name FROM category AS category
         WHERE category.data_status = 'active'
@@ -212,7 +212,7 @@ cmsCategoriesRouter.get(
 // add new category
 cmsCategoriesRouter.post(
   "/add",
-  async (req: SessionRequest, res: Response, next: NextFunction) => {
+  async (req: Request, res: Response, next: NextFunction) => {
     const data = req.body;
 
     // validate category name is not empty
@@ -265,7 +265,7 @@ cmsCategoriesRouter.post(
 // update category
 cmsCategoriesRouter.post(
   "/update",
-  async (req: SessionRequest, res: Response, next: NextFunction) => {
+  async (req: Request, res: Response, next: NextFunction) => {
     const data = req.body;
 
     // validate category name is not empty and id is provided
@@ -320,7 +320,7 @@ cmsCategoriesRouter.post(
 // delete category
 cmsCategoriesRouter.post(
   "/delete",
-  async (req: SessionRequest, res: Response, next: NextFunction) => {
+  async (req: Request, res: Response, next: NextFunction) => {
     const data = req.body;
 
     // validate category id is valid

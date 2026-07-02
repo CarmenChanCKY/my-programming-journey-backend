@@ -37,6 +37,40 @@ Better Auth server config with:
 
 ---
 
+## Phase 1.5 — Docker Notes
+
+The project runs entirely in Docker (MySQL + backend). These notes supersede generic instructions.
+
+### Where env vars go
+Add `BETTER_AUTH_SECRET` and `BETTER_AUTH_URL` to `config/env/.env.development` (already loaded by docker-compose). No need to touch `docker-compose.yml` — the `env_file` directive picks them up automatically.
+
+**Note:** You handle `.env`-related files manually. I'll let you know when a step requires updating them.
+
+### Running migrations
+MySQL is reachable as `mpj_db:3306` from the backend container's network. Run:
+```bash
+docker compose exec mpj_backend npx auth migrate --config src/middleware/auth/auth.ts
+```
+This uses the backend's existing env vars (`DB_HOST=mpj_db`), so no extra config needed. Do NOT run from the host — it would need a separate `DB_HOST` override.
+
+### Creating the admin account
+Write the one-time script as described in Phase 3, then:
+```bash
+docker compose exec mpj_backend npx tsx scripts/create-admin.ts
+```
+
+### Restarting the backend
+| Situation | Command |
+|-----------|---------|
+| Code changes via bind mount (nodemon watches `dist/`) | Auto-reload — no restart needed |
+| New env vars added to `.env.development` | `docker compose up -d --build mpj_backend` |
+| After running migration | `docker compose restart mpj_backend` |
+
+### Dockerfile consideration
+The Dockerfile runs `npm install` at build time. Since `better-auth` and `@better-auth/cli` are already in `package.json`, rebuilding (`docker compose up -d --build`) will include them. No Dockerfile changes needed.
+
+---
+
 ## Phase 2 — Wire into Express
 
 ### 4. Update `src/index.ts`
@@ -96,6 +130,8 @@ app.use(cors({ origin: allowedOrigins, credentials: true }));
 ## Phase 3 — Environment & Database
 
 ### 9. Update `.env` files
+You handle these manually — I'll flag this step when we reach it.
+
 ```env
 # Add
 BETTER_AUTH_SECRET=<openssl rand -base64 32>
