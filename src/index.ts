@@ -1,5 +1,5 @@
 import express, { Express, Request, Response } from "express";
-import 'reflect-metadata';
+import "reflect-metadata";
 import { getEnvironmentVar } from "config/env/env";
 import { customErrorHandler } from "@/middleware/error-handler/error_handler";
 import {
@@ -46,7 +46,7 @@ app.use(
         "img-src": ["'self'", "https://cdn.jsdelivr.net"],
       },
     },
-  })
+  }),
 );
 
 const allowedOrigins = [
@@ -58,10 +58,13 @@ app.use(
   cors({
     origin: allowedOrigins,
     credentials: true,
-  })
+  }),
 );
 
-app.all("/token-admin/*splat", toNodeHandler(auth));
+app.all(
+  `${getEnvironmentVar("API_BASE_PATH", "/token-admin")}/*splat`,
+  toNodeHandler(auth),
+);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -77,17 +80,12 @@ app.use(
   "/cms/categories",
   cmsRateLimitMiddleware,
   requireAuth,
-  cmsCategoriesRouter
+  cmsCategoriesRouter,
 );
 
 app.use("/cms/post", cmsRateLimitMiddleware, requireAuth, cmsPostRouter);
 
-app.use(
-  "/cms/upload",
-  cmsRateLimitMiddleware,
-  requireAuth,
-  cmsUploaderRouter
-);
+app.use("/cms/upload", cmsRateLimitMiddleware, requireAuth, cmsUploaderRouter);
 
 // for google auth callback
 app.use(
@@ -95,7 +93,7 @@ app.use(
   async (req: Request, res: Response) => {
     // callback about the auth callback is success / fail
     const handleCallback = await receiveAuthCallback(
-      String(req.query.code || "")
+      String(req.query.code || ""),
     );
 
     let success = false;
@@ -147,7 +145,7 @@ app.use(
     </html>`;
 
     res.send(result);
-  }
+  },
 );
 
 app.use(customErrorHandler);
