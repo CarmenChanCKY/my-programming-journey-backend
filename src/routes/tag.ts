@@ -31,7 +31,7 @@ tagsRouter.get(
                         AND tags.data_status = 'active'
                     WHERE post_tags.data_status = 'active'
                     ${filterIDQuery}
-                    GROUP BY post_tags.tags_id
+                    GROUP BY post_tags.tags_id, tags.id, tags.name
                     ORDER BY post_count DESC, tags.id ASC;`;
 
       const [result] = await dbPool.execute(query, [...hideIDList]);

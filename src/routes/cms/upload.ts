@@ -1,5 +1,4 @@
-import express, { NextFunction, Response } from "express";
-import { SessionRequest } from "supertokens-node/framework/express";
+import express, { NextFunction, Request, Response } from "express";
 import multer from "multer";
 import ImageUploader from "@/modules/image_upload/image_uploader";
 import os from "os";
@@ -19,7 +18,7 @@ const upload = multer({ storage: storage });
 cmsUploaderRouter.post(
   "/",
   upload.single("file"),
-  async (req: SessionRequest, res: Response, next: NextFunction) => {
+  async (req: Request, res: Response, next: NextFunction) => {
     if (!req.file || !req.file.path) {
       return res.send({
         success: false,

@@ -1,9 +1,9 @@
-import express, { NextFunction, Response } from "express";
+import express, { NextFunction, Request, Response } from "express";
 import { dbPool } from "config/database/connect";
 import { getErrorMsg } from "@/middleware/error-handler/error_handler";
 import { validateQueryString } from "@/middleware/validator/query_validate";
 import { cmsWriteErrorLog, writeConsoleLog } from "@/modules/logger";
-import { SessionRequest } from "supertokens-node/framework/express";
+
 import { validateTagFormData } from "@/middleware/validator/tags_validate";
 
 const cmsTagsRouter = express.Router();
@@ -11,7 +11,7 @@ const cmsTagsRouter = express.Router();
 // get tag list
 cmsTagsRouter.get(
   "/",
-  async (req: SessionRequest, res: Response, next: NextFunction) => {
+  async (req: Request, res: Response, next: NextFunction) => {
     let pages: any = req.query.pages;
     let filter: any = req.query.filterUsedCount
       ?.toString()
@@ -112,7 +112,7 @@ cmsTagsRouter.get(
                         AND post_tags.data_status = 'active'
                     WHERE tags.data_status = 'active'
                      ${keywordQuery}
-                    GROUP BY tags.id
+                    GROUP BY tags.id, tags.name
                     ${filterQuery}
                     ORDER BY tags.id DESC
                     LIMIT ${limit} OFFSET ${pages};`;
@@ -149,7 +149,7 @@ cmsTagsRouter.get(
 // get used tags name and id
 cmsTagsRouter.get(
   "/filter-tags-list",
-  async (req: SessionRequest, res: Response, next: NextFunction) => {
+  async (req: Request, res: Response, next: NextFunction) => {
     try {
       let filterQuery = " HAVING COUNT(post_tags.post_id) > 0 ";
 
@@ -158,7 +158,7 @@ cmsTagsRouter.get(
                       LEFT JOIN post_tags AS post_tags ON tags.id = post_tags.tags_id
                         AND post_tags.data_status = 'active'
                     WHERE tags.data_status = 'active'
-                    GROUP BY tags.id
+                    GROUP BY tags.id, tags.name
                     ${filterQuery}
                     ORDER BY tags.name ASC;`;
 
@@ -184,7 +184,7 @@ cmsTagsRouter.get(
 // get tag list for post detail
 cmsTagsRouter.get(
   "/id-name-list",
-  async (req: SessionRequest, res: Response, next: NextFunction) => {
+  async (req: Request, res: Response, next: NextFunction) => {
     try {
       const query = `SELECT tags.id, tags.name FROM tags AS tags
                     WHERE tags.data_status = 'active'
@@ -209,7 +209,7 @@ cmsTagsRouter.get(
 // add new tag
 cmsTagsRouter.post(
   "/add",
-  async (req: SessionRequest, res: Response, next: NextFunction) => {
+  async (req: Request, res: Response, next: NextFunction) => {
     const data = req.body;
 
     // validate tag name is not empty
@@ -262,7 +262,7 @@ cmsTagsRouter.post(
 // update tag
 cmsTagsRouter.post(
   "/update",
-  async (req: SessionRequest, res: Response, next: NextFunction) => {
+  async (req: Request, res: Response, next: NextFunction) => {
     const data = req.body;
 
     // validate tag name is not empty and id is provided
@@ -317,7 +317,7 @@ cmsTagsRouter.post(
 // delete tag
 cmsTagsRouter.post(
   "/delete",
-  async (req: SessionRequest, res: Response, next: NextFunction) => {
+  async (req: Request, res: Response, next: NextFunction) => {
     const data = req.body;
 
     // validate tag id is valid

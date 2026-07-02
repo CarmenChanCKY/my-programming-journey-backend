@@ -25,9 +25,9 @@ categoriesRouter.get(
                         JOIN category ON category.id = post.category_id
                              AND category.data_status = 'active'
                         WHERE post.data_status = 'active' AND post.hide_post = 0
-                        GROUP BY category.id
+                        GROUP BY category.id, category.name
                         HAVING COUNT(post.id) > 0
-                        ORDER BY category_id ASC`;
+                        ORDER BY category.id ASC`;
 
       const [groupResult] = await dbPool.execute(groupQuery);
 

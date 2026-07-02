@@ -11,6 +11,7 @@ let dbPool: mysql2.Pool = mysql2.createPool({
   password: getEnvironmentVar("DB_PASSWORD"),
   database: getEnvironmentVar("DB_DATABASE"),
   dateStrings: true,
+  timezone: "Z",
 });
 
 dbPool
