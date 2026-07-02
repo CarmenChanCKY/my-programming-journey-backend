@@ -6,7 +6,7 @@ const isProduction = getEnvironmentVar("NODE_ENV") === "production";
 
 export const auth = betterAuth({
   database: dbPool,
-  basePath: getEnvironmentVar("API_BASE_PATH", "/admin"),
+  basePath: getEnvironmentVar("API_BASE_PATH", "/token-admin"),
   baseURL: getEnvironmentVar("BETTER_AUTH_URL", "http://localhost:3100"),
   emailAndPassword: {
     enabled: true,
