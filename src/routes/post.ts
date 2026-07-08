@@ -171,7 +171,7 @@ postRouter.get(
         return;
       }
 
-      const query = `SELECT title, slug FROM post WHERE id > ? AND hide_post = 0 ORDER BY date ASC, id ASC LIMIT 1 OFFSET 0`;
+      const query = `SELECT title, slug FROM post WHERE id > ? AND hide_post = 0 AND data_status='active' ORDER BY date ASC, id ASC LIMIT 1 OFFSET 0`;
 
       const [result] = await dbPool.execute(query, [id]);
       const data = JSON.parse(JSON.stringify(result));
@@ -206,7 +206,7 @@ postRouter.get(
         return;
       }
 
-      const query = `SELECT title, slug FROM post WHERE id < ? AND hide_post = 0 ORDER BY date DESC, id DESC LIMIT 1 OFFSET 0`;
+      const query = `SELECT title, slug FROM post WHERE id < ? AND hide_post = 0 AND data_status='active' ORDER BY date DESC, id DESC LIMIT 1 OFFSET 0`;
 
       const [result] = await dbPool.execute(query, [id]);
       const data = JSON.parse(JSON.stringify(result));
