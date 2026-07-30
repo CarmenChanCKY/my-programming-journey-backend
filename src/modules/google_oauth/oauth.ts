@@ -11,11 +11,28 @@ const client = new google.auth.OAuth2(clientId, clientSecret, redirectUri);
 
 client.on("tokens", async (tokens: any) => {
   try {
+    const currentTokenResult = await getToken(clientId);
+    // use the refresh token store in db (if tokens.refresh_token does not exists)
+    const existingRefreshToken = currentTokenResult.success
+      ? currentTokenResult.data.refreshToken
+      : "";
+    const refreshToken = tokens.refresh_token
+      ? tokens.refresh_token
+      : existingRefreshToken;
+
+    if (!refreshToken) {
+      writeConsoleLog(
+        "error",
+        "No refresh token available during token refresh event.",
+      );
+      return;
+    }
+
     // insert token to db
     return insertToken(
       clientId,
       tokens.access_token ?? "",
-      tokens.refresh_token ?? "",
+      refreshToken,
       tokens.scope ?? "",
       tokens.token_type ?? "",
       tokens.expiry_date ?? 0
@@ -105,7 +122,7 @@ const apiSetCredentials = async () => {
     return {
       success: false,
       type: "redirect",
-      data: startGoogleAuth(),
+      data: { reauthUrl: startGoogleAuth() },
     };
   }
 };

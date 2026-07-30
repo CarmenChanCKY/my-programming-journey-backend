@@ -18,6 +18,13 @@
     },
     "glob": {
       "*.env": "deny"
+    },
+    "bash": {
+      "cat *.env*": "deny",
+      "cat .*env*": "deny",
+      "printenv*": "deny",
+      "env": "deny",
+      "grep * .env*": "deny"
     }
   }
 }

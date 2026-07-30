@@ -4,7 +4,6 @@ import {
   checkIsAuthError,
   getDestFolderID,
   getOauth2Client,
-  startGoogleAuth,
 } from "../google_oauth/oauth";
 import { writeConsoleLog, cmsWriteErrorLog } from "../logger";
 import { generateUUIDStr } from "../crypto_helper";

@@ -154,7 +154,7 @@ export default class PostData {
     { groups: ["updatePost"] },
   )
   @IsInt({ groups: ["addPost", "updatePost"] })
-  @Min(1, {
+  @Min(0, {
     groups: ["updatePost", "removePost"],
   })
   @Max(1, {
