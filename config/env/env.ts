@@ -1,7 +1,9 @@
 import dotenv from "dotenv";
 
-if (!process.env.DB_HOST) {
-  dotenv.config({ path: `config/env/.env.${process.env.NODE_ENV || "development"}` });
+if (!process.env.DB_HOST || process.env.NODE_ENV === "development") {
+  dotenv.config({
+    path: `config/env/.env.${process.env.NODE_ENV || "development"}`,
+  });
 }
 
 const getEnvironmentVar = (key: string, defaultVal: any = "") => {

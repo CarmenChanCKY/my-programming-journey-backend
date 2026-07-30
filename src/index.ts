@@ -88,7 +88,7 @@ app.use("/cms/post", cmsRateLimitMiddleware, requireAuth, cmsPostRouter);
 app.use("/cms/upload", cmsRateLimitMiddleware, requireAuth, cmsUploaderRouter);
 
 // for google auth callback
-app.use(
+app.get(
   getEnvironmentVar("GOOGLE_API_REDIRECT_PATHNAME"),
   async (req: Request, res: Response) => {
     // callback about the auth callback is success / fail
