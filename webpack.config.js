@@ -3,13 +3,15 @@ const nodeExternals = require("webpack-node-externals");
 const WebpackShellPluginNext = require("webpack-shell-plugin-next");
 const TsconfigPathsPlugin = require("tsconfig-paths-webpack-plugin");
 
+const isDev = process.env.NODE_ENV === "development";
+
 module.exports = {
-  mode: process.env.NODE_ENV,
-  devtool: "inline-source-map",
+  mode: process.env.NODE_ENV || "production",
+  devtool: isDev ? "inline-source-map" : false,
   target: "node",
   context: path.resolve(__dirname, "src"),
   entry: "src/index.ts",
-  watch: process.env.NODE_ENV === "development",
+  watch: isDev,
   externals: [nodeExternals()],
   output: {
     path: path.resolve(__dirname, "dist"),
@@ -20,12 +22,23 @@ module.exports = {
     plugins: [new TsconfigPathsPlugin()],
     extensions: [".ts", ".tsx", ".js"],
   },
-  plugins: [
-    new WebpackShellPluginNext({
-      onBuildEnd: { scripts: ["npm run run:dev"] },
-    }),
-  ],
+  plugins: isDev
+    ? [
+        new WebpackShellPluginNext({
+          onBuildEnd: { scripts: ["npm run run:dev"] },
+        }),
+      ]
+    : [],
   module: {
-    rules: [{ test: /\.tsx?$/, exclude: /node_modules/, loader: "ts-loader" }],
+    rules: [
+      {
+        test: /\.tsx?$/,
+        exclude: /node_modules/,
+        loader: "ts-loader",
+        options: {
+          transpileOnly: true,
+        },
+      },
+    ],
   },
 };

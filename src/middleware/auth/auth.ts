@@ -10,7 +10,7 @@ export const auth = betterAuth({
   baseURL: getEnvironmentVar("BETTER_AUTH_URL", "http://localhost:3100"),
   emailAndPassword: {
     enabled: true,
-    disableSignUp: true,
+    disableSignUp: getEnvironmentVar("DISABLE_SIGN_UP", "true") === "true",
   },
   trustedOrigins: [
     getEnvironmentVar("CMS_PATH", "http://localhost:3000"),

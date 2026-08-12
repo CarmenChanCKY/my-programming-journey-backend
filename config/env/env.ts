@@ -1,9 +1,13 @@
+import fs from "fs";
 import dotenv from "dotenv";
 
-if (!process.env.DB_HOST || process.env.NODE_ENV === "development") {
-  dotenv.config({
-    path: `config/env/.env.${process.env.NODE_ENV || "development"}`,
-  });
+const envFilePath = `config/env/.env.${process.env.NODE_ENV || "development"}`;
+
+if (
+  (!process.env.DB_HOST || process.env.NODE_ENV === "development") &&
+  fs.existsSync(envFilePath)
+) {
+  dotenv.config({ path: envFilePath });
 }
 
 const getEnvironmentVar = (key: string, defaultVal: any = "") => {

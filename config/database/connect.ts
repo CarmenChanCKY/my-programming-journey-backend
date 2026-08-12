@@ -1,6 +1,6 @@
 import mysql2 from "mysql2/promise";
 import { getEnvironmentVar } from "config/env/env";
-import { writeConsoleLog, writeErrorLog } from "@/modules/logger";
+import { writeConsoleLog, writeErrorLog } from "src/modules/logger";
 
 // connect mysql database
 

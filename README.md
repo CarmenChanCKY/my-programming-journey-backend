@@ -1,98 +1,184 @@
 # My Programming Journey Backend
 
-Start the development server in local:
+Backend API server for the "My Programming Journey" blog platform. Provides public endpoints for reading posts, categories, and tags, as well as authenticated CMS endpoints for content management and image uploads via Google Drive.
+
+- [Frontend](https://github.com/CarmenChanCKY/my-programming-journey)
+- [CMS](https://github.com/CarmenChanCKY/my-programming-journey-cms)
+
+## Tech Stack
+
+- **Runtime**: Node.js with TypeScript
+- **Framework**: Express 5
+- **Database**: MySQL 8.0 with mysql2 driver
+- **Migrations**: Sequelize CLI
+- **Authentication**: Better Auth (email/password, session-based)
+- **Image Storage**: Google Drive API (via OAuth 2.0)
+- **Security**: Helmet, CORS, express-rate-limit
+- **Logging**: Winston
+- **Build**: Webpack with ts-loader
+- **Containerization**: Docker Compose
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js 22+
+- MySQL 8.0+ (or use Docker)
+- Google Cloud project with Drive API enabled (for image uploads)
+
+### Install Dependencies
+
+```
+npm install
+```
+
+### Environment Variables
+
+This project uses environment variable files stored in `config/env/`. Create `.env.development` and `.env.production` files for each environment. See [.env.example](config/env/.env.example) for the full template.
+
+| Variable | Default | Description |
+|---|---|---|
+| `PORT` | 3000 | Express server port |
+| `NODE_ENV` | — | `development` or `production` |
+| `FRONTEND_PATH` | `http://localhost:5173` | Allowed CORS origin for public frontend |
+| `CMS_PATH` | `http://localhost:3000` | Allowed CORS origin for CMS frontend |
+| `DB_HOST` | localhost | MySQL host |
+| `DB_PORT` | 3306 | MySQL port |
+| `DB_USERNAME` | root | MySQL username |
+| `DB_PASSWORD` | — | MySQL password |
+| `DB_DATABASE` | — | MySQL database name |
+| `MYSQL_ROOT_PASSWORD` | — | MySQL root password (Docker) |
+| `BETTER_AUTH_SECRET` | — | Better Auth encryption secret (32+ chars, generate with `openssl rand -base64 32`) |
+| `BETTER_AUTH_URL` | `http://localhost:3100` | Better Auth base URL matching the backend |
+| `API_BASE_PATH` | `/token-admin` | Better Auth API base path |
+| `GOOGLE_API_CLIENT_ID` | — | Google OAuth client ID (Drive API) |
+| `GOOGLE_API_CLIENT_SECRET` | — | Google OAuth client secret |
+| `GOOGLE_API_REDIRECT_URLS` | — | Google OAuth redirect URI |
+| `GOOGLE_API_REDIRECT_PATHNAME` | — | OAuth callback route path |
+| `GOOGLE_API_DESTINATION_FOLDER_ID` | — | Google Drive folder ID for image uploads |
+| `CRYPTO_ENCRYPTION_KEY` | — | AES-256-GCM key for encrypting OAuth tokens at rest |
+| `CMS_LOGIN_EMAIL` | `admin@example.com` | Admin account email (one-time setup script) |
+| `CMS_LOGIN_PW` | `change-me-please` | Admin account password (one-time setup script) |
+
+### Start Development Server
+
 ```
 npm run start:dev
 ```
 
-Build and run the docker container:
+### Build for Production
+
+```
+npm run build
+```
+
+## Authentication (Better Auth)
+
+This project uses [Better Auth](https://better-auth.com) for authentication.
+
+### Configuration
+
+Auth config is located in `src/middleware/auth/auth.ts`:
+- **Database**: Uses the existing `mysql2/promise` connection pool directly
+- **Base path**: `/token-admin` (all auth endpoints)
+- **Sign-in**: Email & password only, sign-up is **disabled** by default (admin accounts are created via a one-time script)
+- **Trusted origins**: CMS frontend and public frontend URLs
+- **Rate limiting**: Better Auth built-in rate limiting enabled (applies to auth endpoints like sign-in)
+- **Session**: 7-day expiry, 24-hour update age, JWE-encrypted cookie cache
+
+### Running Migrations
+
+Better Auth creates its own `user`, `session`, `account`, and `verification` tables. Run the migration inside the Docker container:
+
+```
+docker compose exec mpj_backend npx auth migrate --config src/middleware/auth/auth.ts
+```
+
+Then restart the backend:
+```
+docker compose restart mpj_backend
+```
+
+### Creating an Admin Account
+
+Run the one-time script `scripts/create-admin.ts`:
+
+```
+docker compose exec mpj_backend npx tsx scripts/create-admin.ts
+```
+
+This uses `CMS_LOGIN_EMAIL` and `CMS_LOGIN_PW` from environment variables. Temporarily set `disableSignUp: false` in `auth.ts` before running, then re-enable it.
+
+### Auth Middleware
+
+All CMS routes (`/cms/*`) are protected by the `requireAuth` middleware at `src/middleware/auth/require_auth.ts`. It returns 401 if no valid session cookie is present.
+
+## Google OAuth (Drive Integration)
+
+This is **not** for user login -- it integrates with the **Google Drive API** to upload and manage blog images.
+
+- **Config files**: `src/modules/google_oauth/oauth.ts`, `oauth_db.ts`
+- **Scope**: `https://www.googleapis.com/auth/drive.file`
+- **Token storage**: Refresh and access tokens are encrypted with AES-256-GCM and stored in the `google_oauth_tokens` MySQL table
+- **Re-auth flow**: If tokens expire or are revoked, the API returns a `reauthUrl` to the CMS frontend for re-authorization
+
+## Docker
+
+Docker Compose ([docker-compose.yml](docker-compose.yml)) sets up two services:
+
+| Service | Image | Description |
+|---|---|---|
+| `mpj_db` | [mysql:8.0.39](https://hub.docker.com/_/mysql) | MySQL database |
+| `mpj_backend` | [node:22](https://hub.docker.com/_/node) | Express backend |
+
+Database initialization scripts:
+- **Local**: [init_db_local.sql](docker/db/init_db_local.sql) -- used by Docker Compose
+- **AWS**: [init_db_aws.sql](docker/db/init_db_aws.sql) -- for AWS deployments
+
+### Build and Run
+
 ```
 docker-compose up -d
 ```
 
-Stop the docker container:
+### Stop
+
 ```
 docker-compose stop
 ```
 
-Delete the docker image and container:
+### Remove Containers and Images
+
 ```
 docker-compose down
 ```
 
+## Database
 
-## Config
+### Connection
 
+MySQL connection pool is configured in [config/database/connect.ts](config/database/connect.ts) using the [mysql2](https://www.npmjs.com/package/mysql2) driver. See the [mysql2 documentation](https://sidorares.github.io/node-mysql2/docs#first-query) for details.
 
-## Environment Variable
-This project use environment variable file to store the sensitive information. This file is located in ```/config/env```. Please create ```.env.development``` and ```.env.production``` files for development and production environment. [.env.example](/config/env/env.ts) contains the structure for environment variables.
+### Migrations (Sequelize CLI)
 
-For supertoken variable, please read [supertoken](https://supertokens.com/docs/references/app-info) official website
+Sequelize CLI config is at [config/config.js](config/config.js). See the [Sequelize migration docs](https://sequelize.org/docs/v6/other-topics/migrations/) for reference.
 
-| Variable            | Example   | Description                                              |
-|---------------------|-----------|----------------------------------------------------------|
-| PORT                | 3000      | Port for Express server                                  |
-| DB_HOST             | localhost | Host name for MYSQL Database                             |
-| DB_PORT             | 3306      | Port for MYSQL Database                                  |
-| DB_USERNAME         | root      | Username for MYSQL Database                              |
-| DB_PASSWORD         | xxxxxx    | The password of your MYSQL Database                      |
-| DB_DATABASE         | test_db   | The name of your database                                |
-| MYSQL_ROOT_PASSWORD | xxxxxx    | Root password for MYSQL Database                         |
-| AUTH_API_DOMAIN     | http://localhost:9000   | domain for backend                         |
-| AUTH_WEB_DOMAIN     | http://localhost:9000    | domain for website that using supertoken login function           |
-| API_BASE_PATH       | /token    | See [website](https://supertokens.com/docs/references/app-info#apibasepath-optional) for more details |
-| CORE_CONNECTION_URL | xxxxxx    | See [website](https://supertokens.com/docs/quickstart/next-steps#configure-the-core-service) for more details |
-| CORE_API_KEY        | xxxxxx    | See [website](https://supertokens.com/docs/quickstart/next-steps#configure-the-core-service) for more details  |
-| ADMIN_EMAIL         | xx@gmail.com   | Restrict the access to supertoken dashboard. See [website](https://supertokens.com/docs/post-authentication/dashboard/setup#restricting-access-to-dashboard-users)  for more details |
+```bash
+# Create a new model
+npx sequelize-cli model:generate --name [table_name] --attributes [col]:[type],[col]:[type]
 
+# Create a new migration
+npx sequelize-cli migration:generate --name [name]
 
+# Run all pending migrations
+npx sequelize-cli db:migrate
 
-## Docker
+# Run migrations up to a specific file
+npx sequelize-cli db:migrate --to [migration_file]
 
-This project uses [docker-compose.yml](docker-compose.yml) to set up the development environment. It consists by ```mpj_db``` (database services) and ```mpj_backend``` (backend services).
+# Undo last migration
+npx sequelize-cli db:migrate:undo
 
-[init_db.sql](/docker/db/init_db.sql) is used to initialize and create the database automatically.
-
-Used docker image:
-- [mysql:8.0.39](https://hub.docker.com/layers/library/mysql/8.0.39/images/sha256-7b4902b99989615deaa12a3af4e32f21e9b32a862d6856d121dd44ca71c166ed?context=explore)
-- [node:18](https://hub.docker.com/layers/library/node/18/images/sha256-cc722b58258b36bc4d845113d609fea1e2957f12118fccd2ffaede90f4c5e0c5?context=explore)
-
-## MySQL Database
-
-1. Install [mysql2](https://www.npmjs.com/package/mysql2) package
-   ```
-   npm install --save mysql2
-   npm install --save-dev @types/node
-   ```
-
-2. In [config/database/connect.ts](/config/database/connect.ts), set up the mysql instance. Please follow the [mysql2 documentation](https://sidorares.github.io/node-mysql2/docs#first-query).
-
-
-## Database Migration
-
-1. Install the following [Sequelize](https://sequelize.org/docs/v6/other-topics/migrations/) package:
-   ```
-   npm install --save sequelize
-   npm install --save-dev sequelize-cli
-   ```
-2. Run ```npx sequelize-cli init``` to initialize sequelize project
-3. Create ```.sequelizerc```, set the config file path to [config/config.js](config/config.js)
-4. Create ```config.js```, input the [database configure information](https://sequelize.org/docs/v6/other-topics/migrations/#dynamic-configuration)
-
-### Create Model
-```npx sequelize-cli model:generate --name [table_name] --attributes [column_name]:[data_type],[column_name]:[data_type]```
-
-## Create New Migration
-```npx sequelize-cli migration:generate --name [name]```
-
-### Migrate to specific table
-```npx sequelize-cli db:migrate --to [any file inside /models]```
-
-### Migrate to all tables
-```npx sequelize-cli db:migrate```
-
-### Undo last migration
-```npx sequelize-cli db:migrate:undo```
-
-### View Migration Status
-```npx sequelize-cli db:migrate:status```
+# View migration status
+npx sequelize-cli db:migrate:status
+```
