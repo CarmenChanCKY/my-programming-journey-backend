@@ -1,0 +1,22 @@
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - "version-update:semver-major"
+          - "version-update:semver-minor"
+          - "version-update:semver-patch"
+
+    groups:
+      # group the patch and minor update to a pull request named "safe-security-patches"
+      safe-security-patches:
+        applies-to: security-updates
+        patterns:
+          - "*"
+        update-types:
+          - "patch"
+          - "minor"
