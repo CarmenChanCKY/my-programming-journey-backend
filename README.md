@@ -22,7 +22,7 @@ Backend API server for the "My Programming Journey" blog platform. Provides publ
 
 ### Prerequisites
 
-- Node.js 22+
+- Node.js 22.23.4+
 - MySQL 8.0+ (or use Docker)
 - Google Cloud project with Drive API enabled (for image uploads)
 
