@@ -6,3 +6,4 @@ public
 *.log
 .env.docker
 docker/mysql/*
+backup
